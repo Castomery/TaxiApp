@@ -1,0 +1,18 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.AndroidTaxiApp2" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Customize your light theme here. -->
+        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+    </style>
+
+    <style name="Theme.AndroidTaxiApp2" parent="Theme.AppCompat.Light.NoActionBar" />
+
+    <style name="AndroidTaxiApp2.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="AndroidTaxiApp2.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+
+    <style name="AndroidTaxiApp2.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+</resources>

@@ -1,0 +1,107 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white"
+    android:gravity="center">
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_gravity="center_horizontal">
+
+            <Button
+                android:id="@+id/btn_back"
+                style="@style/Widget.AppCompat.Button.Borderless"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp"
+                android:drawableLeft="@drawable/baseline_arrow_back_ios_24" />
+
+            <LinearLayout
+                android:padding="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
+
+                <de.hdodenhof.circleimageview.CircleImageView
+                    android:id="@+id/upd_imageView"
+                    android:layout_width="200dp"
+                    android:layout_height="200dp"
+                    android:src="@mipmap/ic_launcher_round"
+                    app:civ_border_color="@color/colorPrimary"
+                    app:civ_border_width="1dp"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/textView_show_fullname"
+                    android:hint="Loading..."
+                    android:layout_centerHorizontal="true"
+                    android:layout_marginTop="5dp"
+                    android:textAppearance="@style/TextAppearance.AppCompat.Headline"
+                    android:textColor="@color/black"
+                    android:textSize="25dp"
+                    />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/textView_show_phone"
+                    android:hint="Loading..."
+                    android:layout_centerHorizontal="true"
+                    android:layout_marginTop="5dp"
+                    android:textAppearance="@style/TextAppearance.AppCompat.Headline"
+                    android:textColor="@color/black"
+                    android:textSize="20dp"
+                    />
+            </LinearLayout>
+
+           <LinearLayout
+               android:layout_width="match_parent"
+               android:layout_height="match_parent"
+               android:orientation="vertical">
+               <Button
+                   android:id="@+id/change_data_btn"
+                   android:layout_width="match_parent"
+                   android:layout_height="wrap_content"
+                   android:background="@color/white"
+                   android:layout_marginHorizontal="20dp"
+                   android:text="Change personal info" />
+
+               <Button
+                   android:id="@+id/change_password_btn"
+                   android:layout_width="match_parent"
+                   android:layout_height="wrap_content"
+                   android:background="@color/white"
+                   android:layout_marginHorizontal="20dp"
+                   android:layout_marginTop="20dp"
+                   android:text="Change password" />
+
+               <Button
+                   android:id="@+id/delete_account_btn"
+                   android:layout_width="match_parent"
+                   android:layout_height="wrap_content"
+                   android:background="@color/white"
+                   android:layout_marginHorizontal="20dp"
+                   android:layout_marginTop="20dp"
+                   android:layout_gravity="bottom"
+                   android:text="Delete Account" />
+
+               <Button
+                   android:id="@+id/sign_out_btn"
+                   android:layout_width="match_parent"
+                   android:layout_height="wrap_content"
+                   android:background="@android:color/darker_gray"
+                   android:layout_marginHorizontal="20dp"
+                   android:layout_marginTop="20dp"
+                   android:layout_gravity="bottom"
+                   android:text="Sign out" />
+           </LinearLayout>
+
+        </LinearLayout>
+
+</LinearLayout>

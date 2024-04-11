@@ -17,6 +17,7 @@ import androidx.appcompat.content.res.AppCompatResources;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import com.mapbox.mapboxsdk.Mapbox;
 
 import com.example.androidtaxiapp2.Activities.UserHomeActivity;
 import com.example.androidtaxiapp2.R;
@@ -82,6 +83,9 @@ public class HomeFragment extends Fragment {
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
+
+        Mapbox.getInstance(getContext(), getString(R.string.mapbox_access_token));
+
         HomeViewModel homeViewModel =
                 new ViewModelProvider(this).get(HomeViewModel.class);
 

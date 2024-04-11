@@ -41,22 +41,21 @@
                     android:layout_height="wrap_content"
                     android:id="@+id/textView_show_fullname"
                     android:hint="Loading..."
-                    android:layout_centerHorizontal="true"
+                    android:gravity="center_horizontal"
                     android:layout_marginTop="5dp"
                     android:textAppearance="@style/TextAppearance.AppCompat.Headline"
                     android:textColor="@color/black"
-                    android:textSize="25dp"
+                    android:textSize="25sp"
                     />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:id="@+id/textView_show_phone"
                     android:hint="Loading..."
-                    android:layout_centerHorizontal="true"
                     android:layout_marginTop="5dp"
                     android:textAppearance="@style/TextAppearance.AppCompat.Headline"
                     android:textColor="@color/black"
-                    android:textSize="20dp"
+                    android:textSize="20sp"
                     />
             </LinearLayout>
 

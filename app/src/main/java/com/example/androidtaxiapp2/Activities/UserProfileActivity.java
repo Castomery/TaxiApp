@@ -6,6 +6,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.Activity;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -28,6 +29,7 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -74,9 +76,11 @@ public class UserProfileActivity extends AppCompatActivity {
         _changeDataButton = findViewById(R.id.change_data_btn);
         _signOutButton = findViewById(R.id.sign_out_btn);
         _backButton = findViewById(R.id.btn_back);
+        _changePassButton = findViewById(R.id.change_password_btn);
+        _deleteButton = findViewById(R.id.delete_account_btn);
 
         database = FirebaseDatabase.getInstance();
-        reference = database.getReference(Common.USERS_REFERENCE).child(FirebaseAuth.getInstance().getCurrentUser().getUid());
+        reference = database.getReference(Common.USERS_REFERENCE).child(Common.currentUser.get_uid());
 
         _updatedImg.setOnClickListener(view -> {
             Intent intent = new Intent();
@@ -88,90 +92,104 @@ public class UserProfileActivity extends AppCompatActivity {
         displayValues();
 
         _backButton.setOnClickListener(v -> {
-            database.getReference(Common.ROLES_REFERENCE).child(Common.currentUser.get_roleId())
-                    .addListenerForSingleValueEvent(new ValueEventListener() {
-                        @Override
-                        public void onDataChange(@NonNull DataSnapshot snapshot) {
-                            if (snapshot.exists()){
-                                Role role = snapshot.getValue(Role.class);
-                                if (role.get_name().equals("Client")){
-                                    startActivity(new Intent(UserProfileActivity.this, UserHomeActivity.class));
-                                    finish();
-                                }
-                                else if(role.get_name().equals("Driver")){
-                                    startActivity(new Intent(UserProfileActivity.this, DriverHomeActivity.class));
-                                    finish();
-                                }
-                                else{
-                                }
-                            }
-                        }
-                        @Override
-                        public void onCancelled(@NonNull DatabaseError error) {
-                        }
-                    });
+            goToHomeActivity();
+        });
+
+        _changePassButton.setOnClickListener(v -> {
+            Intent intent = new Intent(UserProfileActivity.this, ChangePasswordActivity.class);
+            startActivity(intent);
+            finish();
         });
 
         _changeDataButton.setOnClickListener(v -> {
-            
-//            String name = _updatedName.getText().toString();
-//            String lastname = _updatedLastname.getText().toString();
-//            String phone = _updatedPhone.getText().toString();
-//
-//            String mobileRegex = "\\+?3?8?0\\d{9}";
-//            Matcher mobileMatcher;
-//            Pattern mobilePattern = Pattern.compile(mobileRegex);
-//            mobileMatcher = mobilePattern.matcher(phone);
-//
-//            if (name.isEmpty() || lastname.isEmpty() || phone.isEmpty()){
-//                Toast.makeText(UserProfileActivity.this, "Fill all fields", Toast.LENGTH_SHORT).show();
-//            }
-//            else if(!mobileMatcher.find()){
-//                _updatedPhone.setError("Invalid phone");
-//                _updatedPhone.requestFocus();
-//            }
-//            else {
-//                setValueAndUpdateDB(name,lastname,phone);
-//            }
+            Intent intent = new Intent(UserProfileActivity.this, ChangeUserInfoActivity.class);
+            startActivity(intent);
+            finish();
         });
 
-        _signOutButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                AlertDialog.Builder builder = new AlertDialog.Builder(UserProfileActivity.this);
-                builder.setTitle("Sign out")
-                        .setMessage("Do you really want to sign out?")
-                        .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
-                        .setPositiveButton("Sign out", (dialog, which) -> {
-                            FirebaseAuth.getInstance().signOut();
-                            Intent intent = new Intent(UserProfileActivity.this, SplashScreenActivity.class);
-                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK| Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                            startActivity(intent);
-                            finish();
-                        })
-                        .setCancelable(false);
-                AlertDialog alertDialog = builder.create();
-                alertDialog.setOnShowListener(dialog -> {
-                    alertDialog.getButton(AlertDialog.BUTTON_POSITIVE)
-                            .setTextColor(getResources().getColor(android.R.color.holo_red_dark));
-                    alertDialog.getButton(AlertDialog.BUTTON_NEGATIVE)
-                            .setTextColor(getResources().getColor(R.color.colorAccent));
-                });
+        _deleteButton.setOnClickListener(v -> {
+            AlertDialog.Builder builder = new AlertDialog.Builder(UserProfileActivity.this, R.style.AlertDialogDark);
+            builder.setTitle("Are you sure?")
+                    .setMessage("Deleting this account will result in completely removing your account from the system and you won`t be able to access the app.")
+                    .setPositiveButton("Delete", (dialog, which) -> {
+                        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+                        user.delete().addOnCompleteListener(task -> {
+                            if(task.isSuccessful()){
+                                reference.removeValue();
+                                Common.currentUser = null;
+                                Intent intent = new Intent(UserProfileActivity.this,SplashScreenActivity.class);
+                                startActivity(intent);
+                                finish();
+                            }
+                            else{
+                                Toast.makeText(UserProfileActivity.this,task.getException().getMessage(),Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    })
+                    .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                    .setCancelable(false);
+            AlertDialog alertDialog = builder.create();
+            alertDialog.setOnShowListener(dialog -> {
+                alertDialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                        .setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+                alertDialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+                        .setTextColor(getResources().getColor(R.color.colorAccent));
+            });
 
-                alertDialog.show();
-            }
+            alertDialog.show();
+        });
+
+        _signOutButton.setOnClickListener(v -> {
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(UserProfileActivity.this, R.style.AlertDialogDark);
+            builder.setTitle("Sign out")
+                    .setMessage("Do you really want to sign out?")
+                    .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                    .setPositiveButton("Sign out", (dialog, which) -> {
+                        FirebaseAuth.getInstance().signOut();
+                        Common.currentUser = null;
+                        Intent intent = new Intent(UserProfileActivity.this, SplashScreenActivity.class);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK| Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        startActivity(intent);
+                        finish();
+                    })
+                    .setCancelable(false);
+            AlertDialog alertDialog = builder.create();
+            alertDialog.setOnShowListener(dialog -> {
+                alertDialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                        .setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+                alertDialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+                        .setTextColor(getResources().getColor(R.color.colorAccent));
+            });
+
+            alertDialog.show();
         });
 
     }
 
-    private void setValueAndUpdateDB(String name, String lastname, String phone) {
-        reference.child("_name").setValue(name);
-        reference.child("_lastname").setValue(lastname);
-        reference.child("_phone").setValue(phone);
-
-        Common.currentUser.set_name(name);
-        Common.currentUser.set_lastname(lastname);
-        Common.currentUser.set_phone(phone);
+    private void goToHomeActivity(){
+        database.getReference(Common.ROLES_REFERENCE).child(Common.currentUser.get_roleId())
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        if (snapshot.exists()){
+                            Role role = snapshot.getValue(Role.class);
+                            if (role.get_name().equals("Client")){
+                                startActivity(new Intent(UserProfileActivity.this, UserHomeActivity.class));
+                                finish();
+                            }
+                            else if(role.get_name().equals("Driver")){
+                                startActivity(new Intent(UserProfileActivity.this, DriverHomeActivity.class));
+                                finish();
+                            }
+                            else{
+                            }
+                        }
+                    }
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+                    }
+                });
     }
 
     private void displayValues(){

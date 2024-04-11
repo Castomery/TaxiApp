@@ -82,11 +82,12 @@ public class LoginActivity extends AppCompatActivity {
    @Override
    protected void onStart(){
         super.onStart();
-        if(firebaseAuth.getCurrentUser()!=null){
-            Toast.makeText(LoginActivity.this,"Already Logged in", Toast.LENGTH_SHORT).show();
-            setCurrentUser();
-        }
-        else{
+        FirebaseUser user= firebaseAuth.getCurrentUser();
+        if(user !=null){
+            if(user.isEmailVerified()){
+                Toast.makeText(LoginActivity.this,"Already Logged in", Toast.LENGTH_SHORT).show();
+                setCurrentUser();
+            }
         }
    }
 

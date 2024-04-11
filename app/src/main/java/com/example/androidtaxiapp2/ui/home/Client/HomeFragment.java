@@ -9,8 +9,6 @@ import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconSize;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineColor;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineWidth;
 
-import android.Manifest;
-import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -20,32 +18,25 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultCallback;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.appcompat.content.res.AppCompatResources;
-import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.androidtaxiapp2.Models.Common;
-import com.example.androidtaxiapp2.Models.OptimizedRoute;
-import com.example.androidtaxiapp2.Models.RouteCallback;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.mapbox.api.directions.v5.DirectionsAdapterFactory;
 import com.mapbox.api.directions.v5.DirectionsCriteria;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
 import com.mapbox.api.optimization.v1.MapboxOptimization;
 
-import com.example.androidtaxiapp2.Activities.UserHomeActivity;
 import com.example.androidtaxiapp2.R;
 import com.example.androidtaxiapp2.databinding.FragmentHomeBinding;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.mapbox.android.gestures.MoveGestureDetector;
 import com.mapbox.api.optimization.v1.models.OptimizationResponse;
 import com.mapbox.geojson.Feature;
 import com.mapbox.geojson.FeatureCollection;
@@ -60,13 +51,18 @@ import com.mapbox.mapboxsdk.style.layers.LineLayer;
 import com.mapbox.mapboxsdk.style.layers.SymbolLayer;
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class HomeFragment extends Fragment implements OnMapReadyCallback {
 
@@ -82,8 +78,9 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     private List<Point> stops = new ArrayList<>();
     private Point origin;
     private FloatingActionButton myLocationButton;
-    private List<OptimizedRoute> optimizedRoutes;
     private List<Point> destinations = new ArrayList<>();
+
+    OkHttpClient client;
 
     private FirebaseDatabase database;
     private DatabaseReference reference;
@@ -152,6 +149,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
 
         binding = FragmentHomeBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
+        client = new OkHttpClient();
 
         mapView = binding.mapView;
         showRoute = binding.showRoute;
@@ -163,12 +161,15 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
 
         origin = Point.fromLngLat(32.10641545195378,49.422827298067375);
         stops.add(origin);
-        Point destination1 = Point.fromLngLat(32.07101602980575,49.4464253366084);
-        Point destination2 = Point.fromLngLat(32.043707542675094,49.45315589003039);
+        Point  destination1 = Point.fromLngLat(32.07101602980575,49.4464253366084);
+        Point  destination2 = Point.fromLngLat(32.043707542675094,49.45315589003039);
 //        stops.add(destination1);
 //        stops.add(destination2);
-        destinations.add(destination1);
         destinations.add(destination2);
+        destinations.add(destination1);
+
+        stops.add(destination2);
+        stops.add(destination1);
 
 //        mapView = binding.mapView;
 //        myLocationButton = binding.focusLocation;
@@ -218,44 +219,74 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public void onMapReady(@NonNull MapboxMap mapboxMap) {
         this.mapboxMap = mapboxMap;
-        mapboxMap.setStyle(Style.MAPBOX_STREETS, new Style.OnStyleLoaded() {
-            @Override
-            public void onStyleLoaded(@NonNull Style style) {
-                // Add origin and destination to the mapboxMap
-                initMarkerIconSymbolLayer(style);
-                initOptimizedRouteLineLayer(style);
-                showRoute.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        currOrderUid = UUID.randomUUID();
-                        checkAllPosibleRoutes(style);
-                    }
-                });
-                //Toast.makeText(OptimizationActivity.this, R.string.click_instructions, Toast.LENGTH_SHORT).show();
-//                mapboxMap.addOnMapClickListener(OptimizationActivity.this);
-//                mapboxMap.addOnMapLongClickListener(OptimizationActivity.this);
-            }
+        mapboxMap.setStyle(Style.MAPBOX_STREETS, style -> {
+            // Add origin and destination to the mapboxMap
+            initMarkerIconSymbolLayer(style);
+            initOptimizedRouteLineLayer(style);
+            showRoute.setOnClickListener(v -> {
+                post(style);
+            });
         });
-
     }
 
-    private void checkAllPosibleRoutes(@NonNull final Style style){
-        currPermutationId = 0;
-        List<List<Point>> permutations = new ArrayList<>();
-        for (int i = 0; i < destinations.size(); i++) {
-            List<Point> points = new ArrayList<>();
-            points.add(origin); // Origin
-            for (int j = 0; j < destinations.size(); j++) {
-                int index = (i + j) % destinations.size();
-                points.add(destinations.get(index));
-            }
-            permutations.add(points);
-        }
+    private void post(@NonNull Style loadedMapStyle){
 
-        for (List<Point> permutation : permutations){
-            getOptimizedRoute(style,permutation);
-            currPermutationId++;
+        String body = "[\"32.043707542675094,49.45315589003039\",\"32.07101602980575,49.4464253366084\"]";
+
+        String org = origin.longitude()+","+origin.latitude();
+
+        RequestBody requestBody = RequestBody.create(MediaType.parse("application/json"), body);
+
+        Request request = new Request.Builder().url("http://10.0.2.2:5249/api/Distribution?origin="+org)
+                .post(requestBody)
+                .addHeader("accept", "text/plain")
+                .addHeader("Content-Type", "application/json")
+                .build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                getActivity().runOnUiThread(() -> {
+                    Toast.makeText(getActivity(),"Failed", Toast.LENGTH_SHORT).show();
+                    Log.d("TAG", e.getMessage());
+                });
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Gson gson = new Gson();
+                        List<String> coordinates = null;
+                        try {
+                            coordinates = gson.fromJson(response.body().string(), List.class);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+
+                        Log.d("TAG", coordinates.toString());
+                        List<Point> routeCoord = parseToPoints(coordinates);
+                        addDestinationMarker(loadedMapStyle,routeCoord);
+                        Log.d("TAG", routeCoord.toString());
+                        getOptimizedRoute(loadedMapStyle,routeCoord);
+                    }
+                });
+            }
+        });
+    }
+
+    private List<Point> parseToPoints(List<String> coordinates) {
+        List<Point> result = new ArrayList<>();
+
+        for (String coord : coordinates){
+            String[] parts = coord.split(",");
+            double lon = Double.parseDouble(parts[0]);
+            double lat = Double.parseDouble(parts[1]);
+            result.add(Point.fromLngLat(lon,lat));
         }
+        return result;
     }
 
     private String ListOfPointsToString(List<Point> coordinates){
@@ -289,9 +320,9 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         ));
     }
 
-    private void addDestinationMarker(@NonNull Style style) {
+    private void addDestinationMarker(@NonNull Style style, List<Point> coords) {
         List<Feature> destinationMarkerList = new ArrayList<>();
-        for (Point singlePoint : stops) {
+        for (Point singlePoint : coords) {
             destinationMarkerList.add(Feature.fromGeometry(
                     Point.fromLngLat(singlePoint.longitude(), singlePoint.latitude())));
         }
@@ -310,57 +341,6 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
                 ), "icon-layer-id");
     }
 
-    private void getOptimizedRoute(@NonNull final Style style, List<Point> coordinates) {
-        optimizedClient = MapboxOptimization.builder()
-                .source(FIRST)
-                .destination(LAST)
-                .coordinates(coordinates)
-                .overview(DirectionsCriteria.OVERVIEW_FULL)
-                .profile(DirectionsCriteria.PROFILE_DRIVING)
-                .accessToken(Mapbox.getAccessToken() != null ? Mapbox.getAccessToken() : getString(R.string.mapbox_access_token))
-                .build();
-
-//        Callback<OptimizationResponse> responseCallback = new RouteCallback();
-//        optimizedClient.enqueueCall(responseCallback);
-//
-//        Log.d("TAG", "route:" + ((RouteCallback) responseCallback).getDistance());
-
-        optimizedClient.enqueueCall(new Callback<OptimizationResponse>() {
-            @Override
-            public void onResponse(Call<OptimizationResponse> call, Response<OptimizationResponse> response) {
-                if (!response.isSuccessful()) {
-                    Toast.makeText(getActivity(), "No success", Toast.LENGTH_SHORT).show();
-                } else {
-                    if (response.body() != null) {
-                        List<DirectionsRoute> routes = response.body().trips();
-                        if (routes != null) {
-                            if (routes.isEmpty()) {
-
-                                Toast.makeText(getActivity(), "No routes",
-                                        Toast.LENGTH_SHORT).show();
-                            } else {
-                                // Get most optimized route from API response
-                                optimizedRoute = routes.get(0);
-                                OptimizedRoute optimizedRoute1 = new OptimizedRoute(ListOfPointsToString(coordinates), routes.get(0).distance());
-                                reference.child(String.valueOf(currOrderUid)).push().setValue(optimizedRoute1);
-                                //drawOptimizedRoute(style, optimizedRoute);
-                            }
-                        } else {
-                            Toast.makeText(getActivity(), "Null response", Toast.LENGTH_SHORT).show();
-                        }
-                    } else {
-
-                        Toast.makeText(getActivity(), "Null body", Toast.LENGTH_SHORT).show();
-                    }
-                }
-            }
-
-            @Override
-            public void onFailure(Call<OptimizationResponse> call, Throwable throwable) {
-            }
-        });
-    }
-
     private void drawOptimizedRoute(@NonNull Style style, DirectionsRoute route) {
         GeoJsonSource optimizedLineSource = style.getSourceAs("optimized-route-source-id");
         if (optimizedLineSource != null) {
@@ -369,6 +349,44 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
+    private void getOptimizedRoute(@NonNull final Style style, List<Point> coordinates) {
+        optimizedClient = MapboxOptimization.builder()
+                .source(FIRST)
+                .destination(LAST)
+                .coordinates(coordinates)
+                .roundTrip(false)
+                .overview(DirectionsCriteria.OVERVIEW_FULL)
+                .profile(DirectionsCriteria.PROFILE_DRIVING)
+                .accessToken(Mapbox.getAccessToken() != null ? Mapbox.getAccessToken() : getString(R.string.mapbox_access_token))
+                .build();
+
+        optimizedClient.enqueueCall(new retrofit2.Callback<OptimizationResponse>() {
 
 
+            @Override
+            public void onResponse(retrofit2.Call<OptimizationResponse> call, retrofit2.Response<OptimizationResponse> response) {
+                if (!response.isSuccessful()) {
+                } else {
+                    if (response.body() != null) {
+                        List<DirectionsRoute> routes = response.body().trips();
+                        if (routes != null) {
+                            if (routes.isEmpty()) {
+                            } else {
+                                // Get most optimized route from API response
+                                optimizedRoute = routes.get(0);
+                                Log.d("TAG", routes.get(0).toString());
+                                drawOptimizedRoute(style, optimizedRoute);
+                            }
+                        } else {
+                        }
+                    } else {
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(retrofit2.Call<OptimizationResponse> call, Throwable t) {
+            }
+        });
+    }
 }

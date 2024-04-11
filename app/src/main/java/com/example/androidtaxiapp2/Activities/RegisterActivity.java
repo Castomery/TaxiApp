@@ -97,7 +97,8 @@ public class RegisterActivity extends AppCompatActivity {
                 _signUpPhone.requestFocus();
             }
             else if(!password.equals(confirmPass)){
-                Toast.makeText(RegisterActivity.this,"Passwords aren`t matching", Toast.LENGTH_SHORT).show();
+                _signUpConfirmPassword.setError("Pass doesn`t match");
+                _signUpConfirmPassword.requestFocus();
             }
             else {
                 database.getReference().child("Roles").child("Client_role_id").addListenerForSingleValueEvent(new ValueEventListener() {
@@ -117,12 +118,9 @@ public class RegisterActivity extends AppCompatActivity {
             }
         });
 
-        _loginRedirectText.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(RegisterActivity.this,LoginActivity.class);
-                startActivity(intent);
-            }
+        _loginRedirectText.setOnClickListener(v -> {
+            Intent intent = new Intent(RegisterActivity.this,LoginActivity.class);
+            startActivity(intent);
         });
     }
     private void registerUserFireBaseAuth(String name, String lastname, String email, String password,String imgUrl, String phone, String roleId, String date) {
@@ -142,7 +140,7 @@ public class RegisterActivity extends AppCompatActivity {
                             firebaseUser.sendEmailVerification();
 
                             Toast.makeText(RegisterActivity.this,"User succesfuly registered", Toast.LENGTH_SHORT).show();
-                            Intent intent = new Intent(RegisterActivity.this, LoginActivity.class);
+                            Intent intent = new Intent(RegisterActivity.this, SplashScreenActivity.class);
                             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP| Intent.FLAG_ACTIVITY_CLEAR_TASK| Intent.FLAG_ACTIVITY_NEW_TASK);
                             startActivity(intent);
                             finish();

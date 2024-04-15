@@ -67,18 +67,18 @@ public class DriverHomeActivity extends AppCompatActivity {
             return true;
         });
 
-        View headerView = navigationView.getHeaderView(0);
-        TextView txt_name = headerView.findViewById(R.id.driver_txt_name);
-        TextView txt_phone = headerView.findViewById(R.id.driver_txt_phone);
-        ImageView img  = headerView.findViewById(R.id.driver_imageView);
-
-        txt_name.setText(Common.buildWelcomeMessage());
-        txt_phone.setText(Common.currentUser != null ? Common.currentUser.get_phone():"");
-        if (Common.currentUser != null && !TextUtils.isEmpty(Common.currentUser.get_urlImage())){
-            Glide.with(this)
-                    .load(Common.currentUser.get_urlImage())
-                    .into(img);
-        }
+//        View headerView = navigationView.getHeaderView(0);
+//        TextView txt_name = headerView.findViewById(R.id.driver_txt_name);
+//        TextView txt_phone = headerView.findViewById(R.id.driver_txt_phone);
+//        ImageView img  = headerView.findViewById(R.id.driver_imageView);
+//
+//        txt_name.setText(Common.buildWelcomeMessage());
+//        txt_phone.setText(Common.currentUser != null ? Common.currentUser.get_phone():"");
+//        if (Common.currentUser != null && !TextUtils.isEmpty(Common.currentUser.get_urlImage())){
+//            Glide.with(this)
+//                    .load(Common.currentUser.get_urlImage())
+//                    .into(img);
+//        }
     }
 
     @Override

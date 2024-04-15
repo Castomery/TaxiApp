@@ -9,9 +9,12 @@ import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconSize;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineColor;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineWidth;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.location.Location;
+import android.location.LocationListener;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -20,15 +23,23 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.example.androidtaxiapp2.Activities.CreateGoupRideActivity;
 import com.example.androidtaxiapp2.Models.Common;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.mapbox.android.core.location.LocationEngine;
+import com.mapbox.android.core.location.LocationEngineProvider;
+import com.mapbox.android.core.permissions.PermissionsListener;
+import com.mapbox.android.core.permissions.PermissionsManager;
 import com.mapbox.api.directions.v5.DirectionsAdapterFactory;
 import com.mapbox.api.directions.v5.DirectionsCriteria;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
@@ -43,6 +54,14 @@ import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.geojson.LineString;
 import com.mapbox.geojson.Point;
 import com.mapbox.mapboxsdk.Mapbox;
+import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
+import com.mapbox.mapboxsdk.geometry.LatLng;
+import com.mapbox.mapboxsdk.location.LocationComponent;
+import com.mapbox.mapboxsdk.location.LocationComponentActivationOptions;
+import com.mapbox.mapboxsdk.location.OnCameraTrackingChangedListener;
+import com.mapbox.mapboxsdk.location.OnLocationClickListener;
+import com.mapbox.mapboxsdk.location.modes.CameraMode;
+import com.mapbox.mapboxsdk.location.modes.RenderMode;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
@@ -50,6 +69,7 @@ import com.mapbox.mapboxsdk.maps.Style;
 import com.mapbox.mapboxsdk.style.layers.LineLayer;
 import com.mapbox.mapboxsdk.style.layers.SymbolLayer;
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
+
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -64,7 +84,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class HomeFragment extends Fragment implements OnMapReadyCallback {
+public class HomeFragment extends Fragment implements OnMapReadyCallback, OnLocationClickListener, PermissionsListener, OnCameraTrackingChangedListener {
 
     private static final String ICON_GEOJSON_SOURCE_ID = "icon-source-id";
     private static final String FIRST = "first";
@@ -75,11 +95,14 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     private MapboxMap mapboxMap;
     private DirectionsRoute optimizedRoute;
     private MapboxOptimization optimizedClient;
+    private PermissionsManager permissionsManager;
+    private LocationComponent locationComponent;
+
     private List<Point> stops = new ArrayList<>();
     private Point origin;
     private FloatingActionButton myLocationButton;
     private List<Point> destinations = new ArrayList<>();
-
+    private boolean isInTrackingMode;
     OkHttpClient client;
 
     private FirebaseDatabase database;
@@ -88,54 +111,6 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     private int currPermutationId;
 
     private Button showRoute;
-
-//    private  final ActivityResultLauncher<String> activityResultLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), new ActivityResultCallback<Boolean>() {
-//        @Override
-//        public void onActivityResult(Boolean o) {
-//            if(o){
-//                Toast.makeText(getActivity(),"Permission Granted", Toast.LENGTH_SHORT).show();
-//            }
-//            else{
-//                Toast.makeText(getActivity(),"Permission Denied", Toast.LENGTH_SHORT).show();
-//            }
-//        }
-//    });
-
-//    private final OnIndicatorBearingChangedListener onIndicatorBearingChangedListener = new OnIndicatorBearingChangedListener() {
-//        @Override
-//        public void onIndicatorBearingChanged(double v) {
-//            mapView.getMapboxMap().setCamera(new CameraOptions.Builder().bearing(v).build());
-//        }
-//    };
-//
-//    private final OnIndicatorPositionChangedListener onIndicatorPositionChangedListener = new OnIndicatorPositionChangedListener() {
-//        @Override
-//        public void onIndicatorPositionChanged(@NonNull Point point) {
-//            mapView.getMapboxMap().setCamera(new CameraOptions.Builder().center(point).zoom(15.0).build());
-//            getGestures(mapView).setFocalPoint(mapView.getMapboxMap().pixelForCoordinate(point));
-//        }
-//    };
-//
-//    private final OnMoveListener onMoveListener = new OnMoveListener() {
-//        @Override
-//        public void onMoveBegin(@NonNull MoveGestureDetector moveGestureDetector) {
-//            getLocationComponent(mapView).removeOnIndicatorPositionChangedListener(onIndicatorPositionChangedListener);
-//            getLocationComponent(mapView).removeOnIndicatorBearingChangedListener(onIndicatorBearingChangedListener);
-//            getGestures(mapView).removeOnMoveListener(onMoveListener);
-//            myLocationButton.show();
-//        }
-//
-//        @Override
-//        public boolean onMove(@NonNull MoveGestureDetector moveGestureDetector) {
-//            return false;
-//        }
-//
-//        @Override
-//        public void onMoveEnd(@NonNull MoveGestureDetector moveGestureDetector) {
-//
-//        }
-//    };
-
 
     private FragmentHomeBinding binding;
 
@@ -155,52 +130,16 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         showRoute = binding.showRoute;
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
+        showRoute.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getActivity(), CreateGoupRideActivity.class);
+                startActivity(intent);
+            }
+        });
 
         database = FirebaseDatabase.getInstance();
         reference = database.getReference(Common.OPTIMIZED_ROUTES_REFERENCE);
-
-        origin = Point.fromLngLat(32.10641545195378,49.422827298067375);
-        stops.add(origin);
-        Point  destination1 = Point.fromLngLat(32.07101602980575,49.4464253366084);
-        Point  destination2 = Point.fromLngLat(32.043707542675094,49.45315589003039);
-//        stops.add(destination1);
-//        stops.add(destination2);
-        destinations.add(destination2);
-        destinations.add(destination1);
-
-        stops.add(destination2);
-        stops.add(destination1);
-
-//        mapView = binding.mapView;
-//        myLocationButton = binding.focusLocation;
-//
-//        if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-//            activityResultLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
-//        }
-//
-//        mapView.getMapboxMap().loadStyle(Style.STANDARD, new Style.OnStyleLoaded() {
-//            @Override
-//            public void onStyleLoaded(@NonNull Style style) {
-//                mapView.getMapboxMap().setCamera(new CameraOptions.Builder().zoom(15.0).build());
-//                LocationComponentPlugin locationComponentPlugin = getLocationComponent(mapView);
-//                locationComponentPlugin.setEnabled(true);
-//                LocationPuck2D locationPuck2D = new LocationPuck2D();
-//                locationPuck2D.setBearingImage(ImageHolder.from(R.drawable.alternate_map_marker));
-//                locationComponentPlugin.setLocationPuck(locationPuck2D);
-//                locationComponentPlugin.addOnIndicatorPositionChangedListener(onIndicatorPositionChangedListener);
-//                locationComponentPlugin.addOnIndicatorBearingChangedListener(onIndicatorBearingChangedListener);
-//                getGestures(mapView).addOnMoveListener(onMoveListener);
-//
-//                myLocationButton.setOnClickListener(new View.OnClickListener() {
-//                    @Override
-//                    public void onClick(View v) {
-//                        locationComponentPlugin.addOnIndicatorBearingChangedListener(onIndicatorBearingChangedListener);
-//                        locationComponentPlugin.addOnIndicatorPositionChangedListener(onIndicatorPositionChangedListener);
-//                        getGestures(mapView).addOnMoveListener(onMoveListener);
-//                    }
-//                });
-//            }
-//        });
 
         return root;
     }
@@ -219,14 +158,65 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public void onMapReady(@NonNull MapboxMap mapboxMap) {
         this.mapboxMap = mapboxMap;
+
         mapboxMap.setStyle(Style.MAPBOX_STREETS, style -> {
+
             // Add origin and destination to the mapboxMap
-            initMarkerIconSymbolLayer(style);
-            initOptimizedRouteLineLayer(style);
-            showRoute.setOnClickListener(v -> {
-                post(style);
-            });
+            enableLocationComponent(style);
+//            showRoute.setOnClickListener(v -> {
+//
+//                initMarkerIconSymbolLayer(style);
+//                initOptimizedRouteLineLayer(style);
+//                addDestinationMarker(style,stops);
+//                getOptimizedRoute(style,stops);
+//            });
         });
+    }
+
+    @SuppressWarnings( {"MissingPermission"})
+    private void enableLocationComponent(@NonNull Style loadedMapStyle) {
+        // Check if permissions are enabled and if not request
+        if (PermissionsManager.areLocationPermissionsGranted(getActivity())) {
+
+            // Get an instance of the component
+            LocationComponent locationComponent = mapboxMap.getLocationComponent();
+
+            // Activate with options
+            locationComponent.activateLocationComponent(
+                    LocationComponentActivationOptions.builder(getActivity(), loadedMapStyle).build());
+
+            // Enable to make component visible
+            locationComponent.setLocationComponentEnabled(true);
+
+            // Set the component's camera mode
+            locationComponent.setCameraMode(CameraMode.TRACKING);
+
+            // Set the component's render mode
+            locationComponent.setRenderMode(RenderMode.COMPASS);
+
+            origin = Point.fromLngLat(locationComponent.getLastKnownLocation().getLongitude(),locationComponent.getLastKnownLocation().getLatitude());
+
+            locationComponent.addOnLocationClickListener(this);
+
+                    // Add the camera tracking listener. Fires if the map camera is manually moved.
+            locationComponent.addOnCameraTrackingChangedListener(this);
+
+            binding.focusLocation.setOnClickListener(view -> {
+                if (!isInTrackingMode) {
+                    isInTrackingMode = true;
+                    locationComponent.setCameraMode(CameraMode.TRACKING);
+                    locationComponent.zoomWhileTracking(16f);
+                } else {
+
+                }
+            });
+
+
+
+        } else {
+            permissionsManager = new PermissionsManager(this);
+            permissionsManager.requestLocationPermissions(getActivity());
+        }
     }
 
     private void post(@NonNull Style loadedMapStyle){
@@ -388,5 +378,41 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
             public void onFailure(retrofit2.Call<OptimizationResponse> call, Throwable t) {
             }
         });
+    }
+    @Override
+    public void onExplanationNeeded(List<String> list) {
+    }
+
+    @Override
+    public void onPermissionResult(boolean b) {
+        if (b) {
+            mapboxMap.getStyle(new Style.OnStyleLoaded() {
+                @Override
+                public void onStyleLoaded(@NonNull Style style) {
+                    enableLocationComponent(style);
+                }
+            });
+        } else {
+            Toast.makeText(getActivity(), "Permission not franted", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    public void onCameraTrackingDismissed() {
+        isInTrackingMode = false;
+    }
+
+    @Override
+    public void onCameraTrackingChanged(int currentMode) {
+
+    }
+
+    @Override
+    public void onLocationComponentClick() {
+        if (locationComponent.getLastKnownLocation() != null) {
+            LatLng newLocation = new LatLng(locationComponent.getLastKnownLocation().getLatitude(),
+                    locationComponent.getLastKnownLocation().getLongitude());
+            mapboxMap.animateCamera(CameraUpdateFactory.newLatLng(newLocation));
+        }
     }
 }

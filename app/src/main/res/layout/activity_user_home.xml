@@ -6,31 +6,83 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
-    tools:openDrawer="start">
+    tools:openDrawer="start"
+    tools:context=".Activities.UserHomeActivity">
 
-    <include
-        android:id="@+id/app_bar_user_home"
-        layout="@layout/app_bar_user_home"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-    <com.google.android.material.navigation.NavigationView
-        android:id="@+id/nav_view"
-        android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:layout_gravity="start"
-        android:fitsSystemWindows="true"
-        android:background="@android:color/white"
-        app:headerLayout="@layout/nav_header_user_home"
-        app:menu="@menu/activity_main_drawer" >
-        <Button
-            android:id="@+id/become_driver_btn"
-            android:layout_width="match_parent"
-            app:cornerRadius = "30dp"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="20dp"
-            android:layout_gravity="bottom"
-            android:layout_marginBottom="20dp"
-            android:text = "Become driver"/>
-    </com.google.android.material.navigation.NavigationView>>
+        android:orientation="vertical">
+
+        <include
+            layout="@layout/toolbar"/>
+
+        <RelativeLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent">
+
+            <com.mapbox.mapboxsdk.maps.MapView
+                android:id="@+id/mapView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:mapbox_cameraTargetLat="49.44"
+                app:mapbox_cameraTargetLng="32.05"
+                app:mapbox_cameraZoom="12.0" />
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="16sp"
+                android:layout_alignParentEnd="true"
+                android:layout_above="@+id/showRoute"
+                android:src="@drawable/my_location"
+                android:id="@+id/focusLocation"
+                />
+            <com.google.android.material.button.MaterialButton
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="30dp"
+                android:layout_alignParentBottom="true"
+                android:layout_marginBottom="20dp"
+                android:id="@+id/showRoute"
+                android:text="Show Route"/>
+        </RelativeLayout>
+
+    </LinearLayout>
+
+    <RelativeLayout
+        android:layout_width="300dp"
+        android:layout_height="match_parent"
+        android:background="@color/white"
+        android:layout_gravity="start">
+
+        <include
+            layout="@layout/nav_drawer"/>
+    </RelativeLayout>
+
+<!--    <include-->
+<!--        android:id="@+id/app_bar_user_home"-->
+<!--        layout="@layout/app_bar_user_home"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="match_parent" />-->
+
+<!--    <com.google.android.material.navigation.NavigationView-->
+<!--        android:id="@+id/nav_view"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="match_parent"-->
+<!--        android:layout_gravity="start"-->
+<!--        android:fitsSystemWindows="true"-->
+<!--        android:background="@android:color/white"-->
+<!--        app:headerLayout="@layout/nav_header_user_home"-->
+<!--        app:menu="@menu/activity_main_drawer" >-->
+<!--        <Button-->
+<!--            android:id="@+id/become_driver_btn"-->
+<!--            android:layout_width="match_parent"-->
+<!--            app:cornerRadius = "30dp"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_marginHorizontal="20dp"-->
+<!--            android:layout_gravity="bottom"-->
+<!--            android:layout_marginBottom="20dp"-->
+<!--            android:text = "Become driver"/>-->
+<!--    </com.google.android.material.navigation.NavigationView>>-->
 </androidx.drawerlayout.widget.DrawerLayout>

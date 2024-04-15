@@ -7,6 +7,11 @@ android {
     namespace = "com.example.androidtaxiapp2"
     compileSdk = 34
 
+    compileOptions {
+                sourceCompatibility  = JavaVersion.VERSION_1_8
+                targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
     defaultConfig {
         applicationId = "com.example.androidtaxiapp2"
         minSdk = 24
@@ -61,7 +66,7 @@ dependencies {
 
     implementation ("com.mapbox.mapboxsdk:mapbox-sdk-services:6.15.0")
     implementation("com.mapbox.mapboxsdk:mapbox-android-sdk:9.7.0")
-
+    implementation ("com.mapbox.mapboxsdk:mapbox-android-plugin-places-v9:0.12.0")
 
     implementation ("androidx.annotation:annotation:1.0.0")
 
@@ -70,4 +75,5 @@ dependencies {
     annotationProcessor("com.github.bumptech.glide:compiler:4.11.0")
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
 }

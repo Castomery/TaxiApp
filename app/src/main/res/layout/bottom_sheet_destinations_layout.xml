@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginTop="100dp"
+        android:id="@+id/searchdestinationsLayout"
+        app:boxStrokeWidth="0sp"
+        app:boxStrokeWidthFocused="0sp"
+        style="@style/Widget.Material3.TextInputEditText.FilledBox.Dense"
+        android:hint="Search"
+        android:elevation="4sp">
+        <com.google.android.material.textfield.TextInputEditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text"
+            android:id="@+id/searchET"
+            />
+    </com.google.android.material.textfield.TextInputLayout>
+
+<!--    <com.mapbox.search.ui.view.SearchResultsView-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_below="@id/searchdestinationsLayout"-->
+<!--        android:id="@+id/search_destinations_result_view"-->
+<!--        android:layout_marginTop="16sp"-->
+<!--        android:visibility="gone"-->
+<!--        android:paddingTop="8sp"-->
+<!--        android:paddingBottom="22sp"/>-->
+
+
+</LinearLayout>

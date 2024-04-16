@@ -115,23 +115,23 @@ public class SplashScreenActivity extends AppCompatActivity {
          binding.progressBar.setVisibility(View.VISIBLE);
 
         new Handler().postDelayed(() -> {
-            Intent intent = new Intent(SplashScreenActivity.this, LoginActivity.class);
-            startActivity(intent);
-            finish();
+                    Intent intent = new Intent(SplashScreenActivity.this, LoginActivity.class);
+                    startActivity(intent);
+                    finish();
         }
                 , 3000);
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode,resultCode,data);
-        if (requestCode == LOGIN_REQUEST_CODE){
-            if (requestCode == RESULT_OK){
-                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-            }
-            else{
-                Toast.makeText(this,"Failed to sign in" , Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
+//    @Override
+//    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+//        super.onActivityResult(requestCode,resultCode,data);
+//        if (requestCode == LOGIN_REQUEST_CODE){
+//            if (requestCode == RESULT_OK){
+//                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+//            }
+//            else{
+//                Toast.makeText(this,"Failed to sign in" , Toast.LENGTH_SHORT).show();
+//            }
+//        }
+//    }
 }

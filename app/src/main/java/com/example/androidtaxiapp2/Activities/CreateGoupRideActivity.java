@@ -26,6 +26,9 @@ import com.mapbox.mapboxsdk.plugins.places.autocomplete.model.PlaceOptions;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Dictionary;
+import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Locale;
 
@@ -40,6 +43,7 @@ public class CreateGoupRideActivity extends AppCompatActivity {
     private BottomSheetDialog dialog;
     private Point origin;
     private List<Point> destinations = new ArrayList<>();
+    private HashMap<String,String> addresses = new HashMap<>();
     private LinearLayout layout;
     private int countOfDestinations = 0;
 
@@ -74,6 +78,7 @@ public class CreateGoupRideActivity extends AppCompatActivity {
             Intent intent = new Intent(CreateGoupRideActivity.this, UserHomeActivity.class);
             intent.putExtra("origin", origin);
             intent.putExtra("destinations", (Serializable) destinations);
+            intent.putExtra("addressesName", addresses);
             startActivity(intent);
             finish();
         });
@@ -106,6 +111,12 @@ public class CreateGoupRideActivity extends AppCompatActivity {
         startActivityForResult(intent,REQEST_CODE_AUTOCOMPLETE);
     }
 
+    private String parsePointToString(Point point){
+        String value = String.valueOf(point.longitude())+","+String.valueOf(point.latitude());
+
+        return value;
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -117,6 +128,7 @@ public class CreateGoupRideActivity extends AppCompatActivity {
             if(onSetOriginClicked){
                 binding.textViewOriginPoint.setText(feature.placeName());
                 origin = (Point) feature.geometry();
+                addresses.put(feature.placeName(),parsePointToString(origin));
                 onSetOriginClicked = false;
             }
             else if (onSetDestinationClicked){
@@ -125,12 +137,16 @@ public class CreateGoupRideActivity extends AppCompatActivity {
                     destinationLayout.setOrientation(LinearLayout.HORIZONTAL);
                     destinationLayout.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
+                    if (!addresses.containsKey(feature.placeName())){
+                        addresses.put(feature.placeName(),parsePointToString((Point) feature.geometry()));
+                    }
+
                     // Create a TextView to display the location name
                     TextView value = new TextView(this);
                     value.setText(feature.placeName());
                     value.setTextSize(20);
                     value.setTextColor(Color.parseColor("#000000"));
-                    value.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f));
+                    value.setLayoutParams(new LinearLayout.LayoutParams(0, 50, 1.0f));
                     destinationLayout.addView(value);
 
                     // Create a delete button

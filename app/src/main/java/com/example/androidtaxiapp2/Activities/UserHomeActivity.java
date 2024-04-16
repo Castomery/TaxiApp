@@ -26,8 +26,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
+import com.example.androidtaxiapp2.Enums.OrderStatus;
 import com.example.androidtaxiapp2.Models.Common;
+import com.example.androidtaxiapp2.Models.Order;
 import com.example.androidtaxiapp2.R;
+import com.example.androidtaxiapp2.Utils.ShortestRoute;
+import com.example.androidtaxiapp2.ui.home.Client.HomeFragment;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
 
@@ -43,8 +47,13 @@ import androidx.navigation.ui.NavigationUI;
 
 import com.example.androidtaxiapp2.databinding.ActivityUserHomeBinding;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.mapbox.android.core.permissions.PermissionsListener;
 import com.mapbox.android.core.permissions.PermissionsManager;
 import com.mapbox.api.directions.v5.DirectionsCriteria;
@@ -72,11 +81,19 @@ import com.mapbox.mapboxsdk.style.layers.LineLayer;
 import com.mapbox.mapboxsdk.style.layers.SymbolLayer;
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
 
+import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCallback, OnLocationClickListener, PermissionsListener, OnCameraTrackingChangedListener {
 
@@ -107,14 +124,18 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
     private FloatingActionButton myLocationButton;
     private List<Point> destinations = new ArrayList<>();
     private boolean isInTrackingMode;
+
+    List<List<Point>> routes = new ArrayList<>();
     OkHttpClient client;
 
     private FirebaseDatabase database;
     private DatabaseReference reference;
     private UUID currOrderUid;
     private int currPermutationId;
+    private OkHttpClient okHttpClient;
 
     private Button showRoute;
+    private Button makeRequest;
 
 
     @Override
@@ -131,9 +152,12 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
         account = findViewById(R.id.account);
         orderHistory = findViewById(R.id.orderHistory);
         _becomeDriverbtn = findViewById(R.id.become_driver_btn);
-        showRoute = binding.showRoute;
+        showRoute = binding.createTrip;
+        makeRequest = binding.createRequest;
+
 
         menu.setOnClickListener(v -> openDrawer(drawer));
+
         home.setOnClickListener(v -> recreate());
         mapView = binding.mapView;
         mapView.onCreate(savedInstanceState);
@@ -146,11 +170,14 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
         database = FirebaseDatabase.getInstance();
         reference = database.getReference(Common.OPTIMIZED_ROUTES_REFERENCE);
 
+        checkIfHasActiveOrders();
+
         _becomeDriverbtn.setOnClickListener(v -> {
 
         });
 
         account.setOnClickListener(v -> redirectActivity(UserHomeActivity.this, UserProfileActivity.class));
+        orderHistory.setOnClickListener(v -> redirectActivity(UserHomeActivity.this, OrderHistoryActivity.class));
         //navigationView = binding.navView;
 
 
@@ -167,13 +194,39 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
         initializeUser();
 
         _becomeDriverbtn = findViewById(R.id.become_driver_btn);
-        _becomeDriverbtn.setOnClickListener(new View.OnClickListener() {
+        _becomeDriverbtn.setOnClickListener(v -> {
+            Intent intent = new Intent(UserHomeActivity.this, StatementActivity.class);
+            startActivity(intent);
+            finish();
+        });
+
+    }
+
+    private void checkIfHasActiveOrders(){
+        reference = database.getReference(Common.ORDERS_REFERENCE);
+        reference.orderByChild("_userid").equalTo(Common.currentUser.get_uid()).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
-            public void onClick(View v) {
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if(snapshot.exists()){
+                    for (DataSnapshot childSnapshot : snapshot.getChildren()){
+                        Order order = childSnapshot.getValue(Order.class);
+                        if (order!=null && order.get_orderStatus().equals(OrderStatus.InProgres.toString())){
+                            showRoute.setVisibility(View.GONE);
+                            makeRequest.setVisibility(View.GONE);
+                            binding.focusLocation.setVisibility(View.GONE);
+                            Toast.makeText(UserHomeActivity.this,"There is active Order", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                    }
+                    Log.d("TAG", snapshot.toString());
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
 
             }
         });
-
     }
 
     private void openDrawer(DrawerLayout drawer){
@@ -289,29 +342,28 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
         Intent intent = getIntent();
 
         if (intent!= null && intent.hasExtra("origin") && intent.hasExtra("destinations")){
-            origin = (Point) intent.getSerializableExtra("origin");
-            destinations = (List<Point>) intent.getSerializableExtra("destinations");
+            okHttpClient = new OkHttpClient();
+            showRoute.setVisibility(View.GONE);
+            binding.focusLocation.setVisibility(View.GONE);
+            makeRequest.setVisibility(View.VISIBLE);
+            setPoints(intent);
+            displayRoute();
 
-            List<Point> stops = new ArrayList<>();
-            stops.add(origin);
-            for(Point point : destinations){
-                stops.add(point);
-            }
-
-                mapboxMap.setStyle(Style.MAPBOX_STREETS, style -> {
-
-                    initMarkerIconSymbolLayer(style);
-                    initOptimizedRouteLineLayer(style);
-                    addDestinationMarker(style,stops);
-                    getOptimizedRoute(style,stops);
-                });
+            makeRequest.setOnClickListener(v -> {
+                Intent intent1 = new Intent(UserHomeActivity.this,CreateRequestActivity.class);
+                intent1.putExtra("origin", origin);
+                intent1.putExtra("destinations", (Serializable) destinations);
+                intent1.putExtra("addressesName", intent.getSerializableExtra("addressesName"));
+                startActivity(intent1);
+                finish();
+            });
             return;
         }
 
         mapboxMap.setStyle(Style.MAPBOX_STREETS, style -> {
 
             // Add origin and destination to the mapboxMap
-            enableLocationComponent(style);
+            //enableLocationComponent(style);
 //            showRoute.setOnClickListener(v -> {
 //
                 //initMarkerIconSymbolLayer(style);
@@ -320,6 +372,94 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
 //                getOptimizedRoute(style,stops);
 //            });
         });
+    }
+
+    private void setPoints(Intent intent){
+        origin = (Point) intent.getSerializableExtra("origin");
+        destinations = (List<Point>) intent.getSerializableExtra("destinations");
+    }
+
+    private void displayRoute() {
+
+//        List<Point> stops = new ArrayList<>();
+//        stops.add(origin);
+//        stops.addAll(destinations);
+
+        mapboxMap.setStyle(Style.MAPBOX_STREETS, style -> {
+            new Thread(() -> getRouteFromServer(style, origin,destinations)).start();
+        });
+    }
+
+    private void getRouteFromServer(@NonNull Style loadedMapStyle, Point origin, List<Point> destinations){
+
+        String body = getDestinationsAsString(destinations);
+
+        String org = origin.longitude()+","+origin.latitude();
+
+        RequestBody requestBody = RequestBody.create(MediaType.parse("application/json"), body);
+
+        Request request = new Request.Builder().url("http://10.0.2.2:5249/api/Distribution/GetRoute?origin="+org)
+                .post(requestBody)
+                .addHeader("accept", "text/plain")
+                .addHeader("Content-Type", "application/json")
+                .build();
+
+        okHttpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                runOnUiThread(() -> {
+                    Toast.makeText(UserHomeActivity.this,"Failed", Toast.LENGTH_SHORT).show();
+                    Log.d("TAG", e.getMessage());
+                });
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+
+                runOnUiThread(() -> {
+                    Gson gson = new Gson();
+                    List<String> points = null;
+
+                    try {
+                        String json = response.body().string();
+                        points = gson.fromJson(json, List.class);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+
+                    List<Point> routeCoord = parseToPoints(points);
+                    initMarkerIconSymbolLayer(loadedMapStyle, origin);
+                    initOptimizedRouteLineLayer(loadedMapStyle);
+                    addDestinationMarker(loadedMapStyle,routeCoord);
+                    Log.d("TAG", routeCoord.toString());
+                    getOptimizedRoute(loadedMapStyle,routeCoord);
+                });
+            }
+        });
+    }
+
+    private List<Point> parseToPoints(List<String> coordinates) {
+        List<Point> result = new ArrayList<>();
+
+        for (String coord : coordinates){
+            String[] parts = coord.split(",");
+            double lon = Double.parseDouble(parts[0]);
+            double lat = Double.parseDouble(parts[1]);
+            result.add(Point.fromLngLat(lon,lat));
+        }
+        return result;
+    }
+
+    private String getDestinationsAsString(List<Point> destinations){
+        String[] coordinates = new String[destinations.size()];
+        for (int i = 0; i < destinations.size(); i++){
+            coordinates[i] = destinations.get(i).longitude() + "," + destinations.get(i).latitude();
+        }
+        JsonArray jsonArray = new JsonArray();
+        for (String coordinate : coordinates){
+            jsonArray.add(coordinate);
+        }
+        return  jsonArray.toString();
     }
 
     @SuppressWarnings( {"MissingPermission"})
@@ -371,7 +511,7 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
         }
     }
 
-    private void initMarkerIconSymbolLayer(@NonNull Style loadedMapStyle) {
+    private void initMarkerIconSymbolLayer(@NonNull Style loadedMapStyle, Point origin) {
         // Add the marker image to map
         Bitmap icon = BitmapFactory.decodeResource(this.getResources(),R.drawable.red_marker);
         loadedMapStyle.addImage("icon-image", icon);

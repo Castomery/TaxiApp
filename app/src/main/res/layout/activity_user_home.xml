@@ -34,7 +34,7 @@
                 android:layout_height="wrap_content"
                 android:layout_margin="16sp"
                 android:layout_alignParentEnd="true"
-                android:layout_above="@+id/showRoute"
+                android:layout_above="@+id/create_trip"
                 android:src="@drawable/my_location"
                 android:id="@+id/focusLocation"
                 />
@@ -44,8 +44,18 @@
                 android:layout_marginHorizontal="30dp"
                 android:layout_alignParentBottom="true"
                 android:layout_marginBottom="20dp"
-                android:id="@+id/showRoute"
-                android:text="Show Route"/>
+                android:id="@+id/create_trip"
+                android:text="Create Trip"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="30dp"
+                android:layout_alignParentBottom="true"
+                android:layout_marginBottom="20dp"
+                android:id="@+id/create_request"
+                android:visibility="invisible"
+                android:text="Make request"/>
         </RelativeLayout>
 
     </LinearLayout>

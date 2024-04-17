@@ -1,12 +1,14 @@
 package com.example.androidtaxiapp2.Activities;
 
+import android.Manifest;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.Patterns;
 import android.view.ContextThemeWrapper;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -16,13 +18,15 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.androidtaxiapp2.Activities.Client.UserHomeActivity;
+import com.example.androidtaxiapp2.Activities.Driver.DriverHomeActivity;
 import com.example.androidtaxiapp2.Models.Common;
 import com.example.androidtaxiapp2.Models.Role;
 import com.example.androidtaxiapp2.Models.User;
 import com.example.androidtaxiapp2.R;
+import com.example.androidtaxiapp2.Utils.UserUtils;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
-import com.google.android.play.core.integrity.IntegrityTokenRequest;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException;
@@ -32,12 +36,11 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
-
-import java.util.Objects;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 public class LoginActivity extends AppCompatActivity {
+    private static final int RC_NOTIFICATION = 2;
     private EditText _loginEmail;
     private EditText _loginPassword;
     private TextView _signUpReditectText;
@@ -77,9 +80,24 @@ public class LoginActivity extends AppCompatActivity {
         startActivity(intent);
         finish();
     });
+
+    if (Build.VERSION.SDK_INT>= Build.VERSION_CODES.O){
+        requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},RC_NOTIFICATION);
+    }
    }
 
-   @Override
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if(requestCode == RC_NOTIFICATION){
+            if(grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                Toast.makeText(LoginActivity.this, "Granted", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    @Override
    protected void onStart(){
         super.onStart();
         FirebaseUser user= firebaseAuth.getCurrentUser();
@@ -99,6 +117,12 @@ public class LoginActivity extends AppCompatActivity {
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
                         if(snapshot.exists()){
                             Common.currentUser = snapshot.getValue(User.class);
+                            FirebaseMessaging.getInstance().getToken()
+                                    .addOnFailureListener(e -> Toast.makeText(LoginActivity.this,e.getMessage(),Toast.LENGTH_SHORT).show())
+                                    .addOnSuccessListener(s -> {
+                                        Log.d("TOKEN", s);
+                                        UserUtils.updateToken(LoginActivity.this,s);
+                                    });
                             goToHomeActivity();
                         }
                     }

@@ -9,14 +9,18 @@ import com.example.androidtaxiapp2.Models.Common;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
 import com.example.androidtaxiapp2.Models.User;
 import com.example.androidtaxiapp2.R;
+import com.example.androidtaxiapp2.Utils.UserUtils;
 import com.example.androidtaxiapp2.databinding.ActivitySplashScreenBinding;
 import com.firebase.ui.auth.AuthMethodPickerLayout;
 import com.firebase.ui.auth.AuthUI;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -24,6 +28,9 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.iid.FirebaseInstanceIdReceiver;
+import com.google.firebase.installations.FirebaseInstallations;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 import java.util.Arrays;
 import java.util.List;
@@ -54,7 +61,7 @@ public class SplashScreenActivity extends AppCompatActivity {
         View view = binding.getRoot();
         setContentView(view);
 
-     //  init();
+       //init();
     }
 
 //    private void init(){
@@ -67,10 +74,12 @@ public class SplashScreenActivity extends AppCompatActivity {
 //        listener = myFirebaseAuth -> {
 //            FirebaseUser user = myFirebaseAuth.getCurrentUser();
 //            if (user != null){
-//                checkUserFromFireBase();
-//            }
-//            else{
-//                showLoginLayout();
+//    FirebaseMessaging.getInstance().getToken()
+//                        .addOnFailureListener(e -> Toast.makeText(SplashScreenActivity.this,e.getMessage(),Toast.LENGTH_SHORT).show()).addOnSuccessListener(s -> {
+//        Log.d("TOKEN", s);
+//        UserUtils.updateToken(SplashScreenActivity.this,s);
+//    });
+//
 //            }
 //        };
 //

@@ -1,15 +1,7 @@
 package com.example.androidtaxiapp2.Models;
 
-import android.os.Parcel;
-import android.os.Parcelable;
-
-import androidx.annotation.NonNull;
-
-import com.example.androidtaxiapp2.Utils.ShortestRoute;
-
 import java.io.Serializable;
 import java.util.Arrays;
-import java.util.List;
 
 public class Order implements Serializable {
     private String _uid;
@@ -23,7 +15,8 @@ public class Order implements Serializable {
     private String _destributionPrice;
     private String _addresses;
 
-    public Order(String _userid, String _driverid, String _orderStatus, String _orderDate, ShortestRoute _route) {
+    public Order( String uuid,String _userid, String _driverid, String _orderStatus, String _orderDate, ShortestRoute _route) {
+        this._uid = uuid;
         this._userid = _userid;
         this._driverid = _driverid;
         this._orderStatus = _orderStatus;

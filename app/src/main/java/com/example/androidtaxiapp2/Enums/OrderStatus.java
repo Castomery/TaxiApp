@@ -1,6 +1,7 @@
 package com.example.androidtaxiapp2.Enums;
 
-public enum OrderStatus {
+public enum
+OrderStatus {
     Done,
     InProgres,
     Canceled

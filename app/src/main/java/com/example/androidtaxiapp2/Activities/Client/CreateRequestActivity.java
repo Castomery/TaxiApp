@@ -1,8 +1,7 @@
-package com.example.androidtaxiapp2.Activities;
+package com.example.androidtaxiapp2.Activities.Client;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
 import android.graphics.Color;
@@ -17,10 +16,8 @@ import android.widget.Toast;
 import com.example.androidtaxiapp2.Enums.OrderStatus;
 import com.example.androidtaxiapp2.Models.Common;
 import com.example.androidtaxiapp2.Models.Order;
-import com.example.androidtaxiapp2.Utils.ShortestRoute;
+import com.example.androidtaxiapp2.Models.ShortestRoute;
 import com.example.androidtaxiapp2.databinding.ActivityCreateRequestBinding;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.gson.Gson;
@@ -34,6 +31,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -51,6 +49,7 @@ public class CreateRequestActivity extends AppCompatActivity {
     private Button economBtn;
     private Button comfortBtn;
     private Button busBtn;
+    private Button backBtn;
 
     private Button makeRequestOneCarBtn;
     private Button makeRequestRecommendationsBtn;
@@ -84,6 +83,7 @@ public class CreateRequestActivity extends AppCompatActivity {
         makeRequestRecommendationsBtn = binding.makeOrderFromRecommendationBtn;
         database = FirebaseDatabase.getInstance();
         reference = database.getReference(Common.ORDERS_REFERENCE);
+        backBtn = binding.createRequestBtnBack;
 
         setContentView(binding.getRoot());
 
@@ -101,6 +101,11 @@ public class CreateRequestActivity extends AppCompatActivity {
         });
         comfortBtn.setOnClickListener(v -> getTripDetails(55,11));
         busBtn.setOnClickListener(v -> getTripDetails(60,12));
+        backBtn.setOnClickListener(v -> {
+            Intent intent1 = new Intent(CreateRequestActivity.this,UserHomeActivity.class);
+            startActivity(intent1);
+            finish();
+        });
     }
 
     private void getTripDetails(double priceForCar, double pricePerKm){
@@ -173,9 +178,9 @@ public class CreateRequestActivity extends AppCompatActivity {
 
                 });
                 makeRequestOneCarBtn.setOnClickListener(v -> {
-
-                    Order order= new Order(Common.currentUser.get_uid(),"", OrderStatus.InProgres.toString(), Calendar.getInstance().getTime().toString(),routeOneCar);
-                    reference.push().setValue(order).addOnCompleteListener(task -> {
+                    String uuid = UUID.randomUUID().toString();
+                    Order order= new Order(uuid,Common.currentUser.get_uid(),"", OrderStatus.InProgres.toString(), Calendar.getInstance().getTime().toString(),routeOneCar);
+                    reference.child(uuid).setValue(order).addOnCompleteListener(task -> {
                         if (task.isSuccessful()){
 
                             Toast.makeText(CreateRequestActivity.this,"Order created", Toast.LENGTH_SHORT).show();
@@ -290,8 +295,9 @@ public class CreateRequestActivity extends AppCompatActivity {
                         @Override
                         public void onClick(View v) {
                             for (ShortestRoute route : recommendations){
-                                Order order= new Order(Common.currentUser.get_uid(),"", OrderStatus.InProgres.toString(), Calendar.getInstance().getTime().toString(),route);
-                                reference.push().setValue(order).addOnCompleteListener(task -> {
+                                String uuid = UUID.randomUUID().toString();
+                                Order order= new Order(uuid,Common.currentUser.get_uid(),"", OrderStatus.InProgres.toString(), Calendar.getInstance().getTime().toString(),route);
+                                reference.child(uuid).setValue(order).addOnCompleteListener(task -> {
                                     if (task.isSuccessful()){
 
                                         Toast.makeText(CreateRequestActivity.this,"Order created", Toast.LENGTH_SHORT).show();

@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context=".Activities.CreateRequestActivity">
+    tools:context=".Activities.Client.CreateRequestActivity">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -13,7 +13,7 @@
         android:orientation="vertical">
 
         <Button
-            android:id="@+id/set_route_btn_back"
+            android:id="@+id/create_request_btn_back"
             style="@style/Widget.AppCompat.Button.Borderless"
             android:layout_width="60dp"
             android:layout_height="wrap_content"

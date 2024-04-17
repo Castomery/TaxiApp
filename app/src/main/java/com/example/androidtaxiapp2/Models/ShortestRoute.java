@@ -1,4 +1,4 @@
-package com.example.androidtaxiapp2.Utils;
+package com.example.androidtaxiapp2.Models;
 
 import java.util.List;
 

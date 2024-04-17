@@ -39,6 +39,10 @@ android {
     buildFeatures{
         viewBinding = true;
     }
+
+    packagingOptions {
+        exclude("META-INF/DEPENDENCIES")
+    }
 }
 
 dependencies {
@@ -53,6 +57,7 @@ dependencies {
     implementation("androidx.navigation:navigation-ui:2.5.3")
     implementation("com.google.firebase:firebase-storage:20.3.0")
     implementation("androidx.legacy:legacy-support-v4:1.0.0")
+    implementation("com.google.firebase:firebase-messaging:23.4.1")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
@@ -62,6 +67,7 @@ dependencies {
     runtimeOnly("com.google.android.material:material:1.12.0-alpha03")
 
     implementation("com.google.firebase:firebase-database:20.3.1")
+    implementation ("com.google.auth:google-auth-library-oauth2-http:1.19.0")
     //implementation("com.mapbox.maps:android:11.2.1")
 
     implementation ("com.mapbox.mapboxsdk:mapbox-sdk-services:6.15.0")

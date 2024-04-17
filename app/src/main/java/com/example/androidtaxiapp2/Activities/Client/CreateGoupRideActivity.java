@@ -1,13 +1,10 @@
-package com.example.androidtaxiapp2.Activities;
+package com.example.androidtaxiapp2.Activities.Client;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.app.ActionBar;
-import android.app.Dialog;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -15,9 +12,6 @@ import android.widget.Toast;
 
 import com.example.androidtaxiapp2.R;
 import com.example.androidtaxiapp2.databinding.ActivityCreateGoupRideBinding;
-import com.example.androidtaxiapp2.databinding.BottomSheetDestinationsLayoutBinding;
-import com.example.androidtaxiapp2.databinding.BottomSheetOriginLayoutBinding;
-import com.example.androidtaxiapp2.ui.home.Client.HomeFragment;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.mapbox.api.geocoding.v5.models.CarmenFeature;
 import com.mapbox.geojson.Point;
@@ -26,21 +20,15 @@ import com.mapbox.mapboxsdk.plugins.places.autocomplete.model.PlaceOptions;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Dictionary;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.List;
-import java.util.Locale;
 
 public class CreateGoupRideActivity extends AppCompatActivity {
 
     private int REQEST_CODE_AUTOCOMPLETE = 1;
     private ActivityCreateGoupRideBinding binding;
-    private BottomSheetOriginLayoutBinding sheetOriginLayoutBinding;
     private Boolean onSetOriginClicked = false;
     private Boolean onSetDestinationClicked = false;
-    private BottomSheetDestinationsLayoutBinding sheetDestinationsLayoutBinding;
-    private BottomSheetDialog dialog;
     private Point origin;
     private List<Point> destinations = new ArrayList<>();
     private HashMap<String,String> addresses = new HashMap<>();
@@ -57,12 +45,7 @@ public class CreateGoupRideActivity extends AppCompatActivity {
         binding = ActivityCreateGoupRideBinding.inflate(getLayoutInflater());
 
         setContentView(binding.getRoot());
-
-        sheetOriginLayoutBinding = BottomSheetOriginLayoutBinding.inflate(getLayoutInflater());
-        sheetDestinationsLayoutBinding = BottomSheetDestinationsLayoutBinding.inflate(getLayoutInflater());
         layout = binding.destinationContainer;
-
-        dialog = new BottomSheetDialog(this);
 
         backButton = binding.setRouteBtnBack;
 

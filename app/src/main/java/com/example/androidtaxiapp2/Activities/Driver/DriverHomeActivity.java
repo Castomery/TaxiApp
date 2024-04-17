@@ -1,4 +1,4 @@
-package com.example.androidtaxiapp2.Activities;
+package com.example.androidtaxiapp2.Activities.Driver;
 
 import static com.mapbox.core.constants.Constants.PRECISION_6;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconAllowOverlap;
@@ -14,6 +14,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.location.Location;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -26,27 +27,24 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
+import com.example.androidtaxiapp2.Activities.Client.CreateGoupRideActivity;
+import com.example.androidtaxiapp2.Activities.Client.CreateRequestActivity;
+import com.example.androidtaxiapp2.Activities.OrderHistoryActivity;
+import com.example.androidtaxiapp2.Activities.Client.StatementActivity;
+import com.example.androidtaxiapp2.Activities.User.UserProfileActivity;
+import com.example.androidtaxiapp2.Activities.Driver.DriverTakeOrderActivity;
 import com.example.androidtaxiapp2.Enums.OrderStatus;
 import com.example.androidtaxiapp2.Models.Common;
 import com.example.androidtaxiapp2.Models.Order;
 import com.example.androidtaxiapp2.R;
-import com.example.androidtaxiapp2.Utils.ShortestRoute;
-import com.example.androidtaxiapp2.ui.home.Client.HomeFragment;
+import com.example.androidtaxiapp2.databinding.ActivityDriverHomeBinding;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.navigation.NavigationView;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.core.view.GravityCompat;
-import androidx.navigation.NavController;
-import androidx.navigation.Navigation;
-import androidx.navigation.ui.AppBarConfiguration;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.navigation.ui.NavigationUI;
 
-import com.example.androidtaxiapp2.databinding.ActivityUserHomeBinding;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -85,7 +83,6 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -95,7 +92,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCallback, OnLocationClickListener, PermissionsListener, OnCameraTrackingChangedListener {
+public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyCallback, OnLocationClickListener, PermissionsListener, OnCameraTrackingChangedListener {
 
     //protected AppBarConfiguration mAppBarConfiguration;
     protected DrawerLayout drawer;
@@ -104,7 +101,7 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
 
     private ImageView menu;
     private LinearLayout home, account, orderHistory;
-    protected ActivityUserHomeBinding binding;
+    protected ActivityDriverHomeBinding binding;
     private Button _becomeDriverbtn;
 
     private static final String ICON_GEOJSON_SOURCE_ID = "icon-source-id";
@@ -125,17 +122,19 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
     private List<Point> destinations = new ArrayList<>();
     private boolean isInTrackingMode;
 
-    List<List<Point>> routes = new ArrayList<>();
+    private Point userCurrLocation;
+
+    //List<List<Point>> routes = new ArrayList<>();
     OkHttpClient client;
 
     private FirebaseDatabase database;
     private DatabaseReference reference;
-    private UUID currOrderUid;
-    private int currPermutationId;
+//    private UUID currOrderUid;
+//    private int currPermutationId;
     private OkHttpClient okHttpClient;
-
-    private Button showRoute;
-    private Button makeRequest;
+    private Button startTripButton;
+    private Button finishTripButton;
+    private Button takeOrderButton;
 
 
     @Override
@@ -143,8 +142,10 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
         super.onCreate(savedInstanceState);
 
         Mapbox.getInstance(this,getString(R.string.mapbox_access_token));
-        binding = ActivityUserHomeBinding.inflate(getLayoutInflater());
+        binding = ActivityDriverHomeBinding.inflate(getLayoutInflater());
+
         setContentView(binding.getRoot());
+
         //setSupportActionBar(binding.appBarUserHome.toolbar);
         drawer = binding.drawerLayout;
         menu = findViewById(R.id.menu);
@@ -152,69 +153,70 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
         account = findViewById(R.id.account);
         orderHistory = findViewById(R.id.orderHistory);
         _becomeDriverbtn = findViewById(R.id.become_driver_btn);
-        showRoute = binding.createTrip;
-        makeRequest = binding.createRequest;
+        startTripButton = binding.driverStartTrip;
+        finishTripButton = binding.finishTrip;
+        myLocationButton = binding.driverFocusLocation;
+        takeOrderButton = binding.takeAvailableOrderBtn;
 
+        _becomeDriverbtn.setVisibility(View.INVISIBLE);
+        startTripButton.setVisibility(View.GONE);
+        finishTripButton.setVisibility(View.GONE);
 
         menu.setOnClickListener(v -> openDrawer(drawer));
 
         home.setOnClickListener(v -> recreate());
-        mapView = binding.mapView;
+        mapView = binding.driverMapView;
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
 
-        showRoute.setOnClickListener(v -> {
-            redirectActivity(UserHomeActivity.this, CreateGoupRideActivity.class);
+        startTripButton.setOnClickListener(v -> {
+            startTripButton.setVisibility(View.GONE);
+            finishTripButton.setVisibility(View.GONE);
+        });
+
+        finishTripButton.setOnClickListener(v -> {
+            finishTripButton.setVisibility(View.GONE);
+            takeOrderButton.setVisibility(View.VISIBLE);
+            reloadMap();
+        });
+
+        takeOrderButton.setOnClickListener(v -> {
+            redirectActivity(DriverHomeActivity.this, DriverTakeOrderActivity.class);
+        });
+
+        startTripButton.setOnClickListener(v -> {
+            redirectActivity(DriverHomeActivity.this, CreateGoupRideActivity.class);
         });
 
         database = FirebaseDatabase.getInstance();
         reference = database.getReference(Common.OPTIMIZED_ROUTES_REFERENCE);
 
-        checkIfHasActiveOrders();
 
-        _becomeDriverbtn.setOnClickListener(v -> {
-
-        });
-
-        account.setOnClickListener(v -> redirectActivity(UserHomeActivity.this, UserProfileActivity.class));
-        orderHistory.setOnClickListener(v -> redirectActivity(UserHomeActivity.this, OrderHistoryActivity.class));
+        account.setOnClickListener(v -> redirectActivity(DriverHomeActivity.this, UserProfileActivity.class));
+        orderHistory.setOnClickListener(v -> redirectActivity(DriverHomeActivity.this, OrderHistoryActivity.class));
         //navigationView = binding.navView;
 
-
-        // Set up navigation
-//        mAppBarConfiguration = new AppBarConfiguration.Builder(
-//                R.id.nav_home, R.id.nav_user_profile)
-//                .setOpenableLayout(drawer)
-//                .build();
-//        navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_user_home);
-//        NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
-//        NavigationUI.setupWithNavController(navigationView, navController);
-
         // Custom initialization for user-specific data
-        initializeUser();
+        checkIfHasActiveOrders();
 
-        _becomeDriverbtn = findViewById(R.id.become_driver_btn);
-        _becomeDriverbtn.setOnClickListener(v -> {
-            Intent intent = new Intent(UserHomeActivity.this, StatementActivity.class);
-            startActivity(intent);
-            finish();
-        });
+        initializeDriver();
+
 
     }
 
     private void checkIfHasActiveOrders(){
         reference = database.getReference(Common.ORDERS_REFERENCE);
-        reference.orderByChild("_userid").equalTo(Common.currentUser.get_uid()).addListenerForSingleValueEvent(new ValueEventListener() {
+        reference.orderByChild("_driverid").equalTo(Common.currentUser.get_uid()).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if(snapshot.exists()){
                     for (DataSnapshot childSnapshot : snapshot.getChildren()){
                         Order order = childSnapshot.getValue(Order.class);
                         if (order!=null && order.get_orderStatus().equals(OrderStatus.InProgres.toString())){
-                            showRoute.setVisibility(View.GONE);
-                            makeRequest.setVisibility(View.GONE);
-                            binding.focusLocation.setVisibility(View.GONE);
-                            Toast.makeText(UserHomeActivity.this,"There is active Order", Toast.LENGTH_SHORT).show();
+                            startTripButton.setVisibility(View.VISIBLE);
+                            finishTripButton.setVisibility(View.GONE);
+                            myLocationButton.setVisibility(View.GONE);
+                            Toast.makeText(DriverHomeActivity.this,"There is active Order", Toast.LENGTH_SHORT).show();
                             return;
                         }
                     }
@@ -226,6 +228,21 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
             public void onCancelled(@NonNull DatabaseError error) {
 
             }
+        });
+    }
+
+    private void reloadMap(){
+        mapboxMap.setStyle(Style.MAPBOX_STREETS, style -> {
+
+            // Add origin and destination to the mapboxMap
+            //enableLocationComponent(style);
+//            showRoute.setOnClickListener(v -> {
+//
+            //initMarkerIconSymbolLayer(style);
+            //initOptimizedRouteLineLayer(style);
+//                addDestinationMarker(style,stops);
+//                getOptimizedRoute(style,stops);
+//            });
         });
     }
 
@@ -246,18 +263,8 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
         activity.finish();
     }
 
-    private void initializeUser() {
+    private void initializeDriver() {
 
-//        navigationView.setNavigationItemSelectedListener(item -> {
-//            if (item.getItemId() == R.id.nav_user_profile) {
-//                Intent intent = new Intent(UserHomeActivity.this, UserProfileActivity.class);
-//                startActivity(intent);
-//                finish();
-//            }
-//            return true;
-//        });
-
-        //View headerView = navigationView.getHeaderView(0);
         TextView txt_name = findViewById(R.id.txt_name);
         TextView txt_phone = findViewById(R.id.txt_phone);
         ImageView img  = findViewById(R.id.imageView);
@@ -271,11 +278,11 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
         }
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.user_home, menu);
-        return true;
-    }
+//    @Override
+//    public boolean onCreateOptionsMenu(Menu menu) {
+//        getMenuInflater().inflate(R.menu.user_home, menu);
+//        return true;
+//    }
 
 //    @Override
 //    public void onDestroy() {
@@ -305,14 +312,10 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
     @Override
     public void onPermissionResult(boolean b) {
         if (b) {
-            mapboxMap.getStyle(new Style.OnStyleLoaded() {
-                @Override
-                public void onStyleLoaded(@NonNull Style style) {
-                    enableLocationComponent(style);
-                }
-            });
+            reloadMap();
+            mapboxMap.getStyle(style -> enableLocationComponent(style));
         } else {
-            Toast.makeText(UserHomeActivity.this, "Permission not granted", Toast.LENGTH_LONG).show();
+            Toast.makeText(DriverHomeActivity.this, "Permission not granted", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -339,54 +342,74 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
     public void onMapReady(@NonNull MapboxMap mapboxMap) {
         this.mapboxMap = mapboxMap;
 
-        Intent intent = getIntent();
-
-        if (intent!= null && intent.hasExtra("origin") && intent.hasExtra("destinations")){
-            okHttpClient = new OkHttpClient();
-            showRoute.setVisibility(View.GONE);
-            binding.focusLocation.setVisibility(View.GONE);
-            makeRequest.setVisibility(View.VISIBLE);
-            setPoints(intent);
-            displayRoute();
-
-            makeRequest.setOnClickListener(v -> {
-                Intent intent1 = new Intent(UserHomeActivity.this,CreateRequestActivity.class);
-                intent1.putExtra("origin", origin);
-                intent1.putExtra("destinations", (Serializable) destinations);
-                intent1.putExtra("addressesName", intent.getSerializableExtra("addressesName"));
-                startActivity(intent1);
-                finish();
-            });
-            return;
-        }
-
         mapboxMap.setStyle(Style.MAPBOX_STREETS, style -> {
 
             // Add origin and destination to the mapboxMap
-            //enableLocationComponent(style);
+            enableLocationComponent(style);
 //            showRoute.setOnClickListener(v -> {
 //
-                //initMarkerIconSymbolLayer(style);
-                //initOptimizedRouteLineLayer(style);
+            //initMarkerIconSymbolLayer(style);
+            //initOptimizedRouteLineLayer(style);
 //                addDestinationMarker(style,stops);
 //                getOptimizedRoute(style,stops);
 //            });
         });
-    }
 
-    private void setPoints(Intent intent){
-        origin = (Point) intent.getSerializableExtra("origin");
-        destinations = (List<Point>) intent.getSerializableExtra("destinations");
+
+        Intent intent = getIntent();
+
+        if (intent!= null && intent.hasExtra("route")){
+            okHttpClient = new OkHttpClient();
+            takeOrderButton.setVisibility(View.GONE);
+            myLocationButton.setVisibility(View.GONE);
+            startTripButton.setVisibility(View.VISIBLE);
+            finishTripButton.setVisibility(View.GONE);
+            getPoints(intent);
+            displayRouteToUser();
+
+            startTripButton.setOnClickListener(v -> {
+                startTripButton.setVisibility(View.GONE);
+                finishTripButton.setVisibility(View.VISIBLE);
+                displayRoute();
+            });
+
+            finishTripButton.setOnClickListener(v -> {
+                reloadMap();
+            });
+        }
     }
 
     private void displayRoute() {
-
-//        List<Point> stops = new ArrayList<>();
-//        stops.add(origin);
-//        stops.addAll(destinations);
-
         mapboxMap.setStyle(Style.MAPBOX_STREETS, style -> {
             new Thread(() -> getRouteFromServer(style, origin,destinations)).start();
+        });
+    }
+
+    private void getPoints(Intent intent){
+        String[] routeStr = intent.getStringExtra("route").split(";");
+        for (int i = 0; i < routeStr.length; i++){
+            String[] cordsStr = routeStr[i].split(",");
+            double lon = Double.parseDouble(cordsStr[0]);
+            double lat = Double.parseDouble(cordsStr[1]);
+            if (i== 0){
+                origin = Point.fromLngLat(lon,lat);
+            }
+            else{
+                destinations.add(Point.fromLngLat(lon,lat));
+            }
+        }
+    }
+
+    private void displayRouteToUser() {
+        mapboxMap.setStyle(Style.MAPBOX_STREETS, style -> {
+            enableLocationComponent(style);
+            initMarkerIconSymbolLayer(style, userCurrLocation);
+            initOptimizedRouteLineLayer(style);
+            List<Point> stops = new ArrayList<>();
+            stops.add(userCurrLocation);
+            stops.add(origin);
+            addDestinationMarkers(style,stops);
+            getOptimizedRoute(style,stops);;
         });
     }
 
@@ -408,7 +431,7 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 runOnUiThread(() -> {
-                    Toast.makeText(UserHomeActivity.this,"Failed", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(DriverHomeActivity.this,"Failed", Toast.LENGTH_SHORT).show();
                     Log.d("TAG", e.getMessage());
                 });
             }
@@ -430,7 +453,7 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
                     List<Point> routeCoord = parseToPoints(points);
                     initMarkerIconSymbolLayer(loadedMapStyle, origin);
                     initOptimizedRouteLineLayer(loadedMapStyle);
-                    addDestinationMarker(loadedMapStyle,routeCoord);
+                    addDestinationMarkers(loadedMapStyle,routeCoord);
                     Log.d("TAG", routeCoord.toString());
                     getOptimizedRoute(loadedMapStyle,routeCoord);
                 });
@@ -474,6 +497,7 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
                 if (locationComponent!=null && loadedMapStyle != null){
                     locationComponent.activateLocationComponent(
                             LocationComponentActivationOptions.builder(this, loadedMapStyle).build());
+                    }
 
                     // Enable to make component visible
                     locationComponent.setLocationComponentEnabled(true);
@@ -484,7 +508,7 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
                     // Set the component's render mode
                     locationComponent.setRenderMode(RenderMode.COMPASS);
 
-                    binding.focusLocation.setOnClickListener(view -> {
+                    myLocationButton.setOnClickListener(view -> {
                         if (!isInTrackingMode) {
                             isInTrackingMode = true;
                             locationComponent.setCameraMode(CameraMode.TRACKING);
@@ -493,6 +517,12 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
 
                         }
                     });
+
+                Location lastKnownLocation = locationComponent.getLastKnownLocation();
+                if (lastKnownLocation != null){
+                    userCurrLocation = Point.fromLngLat(locationComponent.getLastKnownLocation().getLongitude(),locationComponent.getLastKnownLocation().getLatitude());
+                }else{
+
                 }
             }
 
@@ -530,7 +560,7 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
         ));
     }
 
-    private void addDestinationMarker(@NonNull Style style, List<Point> coords) {
+    private void addDestinationMarkers(@NonNull Style style, List<Point> coords) {
         List<Feature> destinationMarkerList = new ArrayList<>();
         for (Point singlePoint : coords) {
             destinationMarkerList.add(Feature.fromGeometry(

@@ -1,17 +1,17 @@
-package com.example.androidtaxiapp2.Activities;
+package com.example.androidtaxiapp2.Activities.Client;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.example.androidtaxiapp2.Activities.OrderHistoryActivity;
 import com.example.androidtaxiapp2.Models.Order;
 import com.example.androidtaxiapp2.R;
 
-public class OrderDetailsActivity extends AppCompatActivity {
+public class ClientOrderDetailsActivity extends AppCompatActivity {
 
     private TextView addresses;
     private TextView status;
@@ -50,7 +50,7 @@ public class OrderDetailsActivity extends AppCompatActivity {
         date.setText(dateStr);
 
         backButton.setOnClickListener(v -> {
-            Intent intent1 = new Intent(OrderDetailsActivity.this, OrderHistoryActivity.class);
+            Intent intent1 = new Intent(ClientOrderDetailsActivity.this, OrderHistoryActivity.class);
             startActivity(intent1);
             finish();
         });

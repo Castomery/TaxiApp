@@ -5,25 +5,22 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
-import com.example.androidtaxiapp2.Activities.Client.ClientOrderDetailsActivity;
-import com.example.androidtaxiapp2.Activities.OrderHistoryActivity;
+import com.example.androidtaxiapp2.Enums.OrderStatus;
 import com.example.androidtaxiapp2.Models.Common;
 import com.example.androidtaxiapp2.Models.Order;
-import com.example.androidtaxiapp2.R;
+import com.example.androidtaxiapp2.Models.TokenModel;
 import com.example.androidtaxiapp2.Utils.UserUtils;
 import com.example.androidtaxiapp2.databinding.ActivityDriverOrderDetailsBinding;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import org.json.JSONException;
-
-import java.io.Serializable;
 
 public class DriverOrderDetailsActivity extends AppCompatActivity {
 
@@ -72,27 +69,68 @@ public class DriverOrderDetailsActivity extends AppCompatActivity {
         });
 
         takeOrderBtn.setOnClickListener(v -> {
+            checkIfOrderStillAvailable(order.get_uid());
             setDriverToOrder(order);
         });
 
         setContentView(binding.getRoot());
     }
 
+    private void checkIfOrderStillAvailable(String orderId) {
+        reference.child(orderId).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()){
+                    Order order = snapshot.getValue(Order.class);
+                    if (order.get_driverid().isEmpty()){
+                        setDriverToOrder(order);
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
+    }
+
     private void setDriverToOrder(Order order) {
         order.set_driverid(Common.currentUser.get_uid());
+        order.set_orderStatus(OrderStatus.InProgress.toString());
         reference.child(order.get_uid()).setValue(order).addOnCompleteListener(task -> {
-            new Thread(() -> {
-                try {
-                    UserUtils.sendOrderTakenNotification();
-                } catch (JSONException e) {
-                    throw new RuntimeException(e);
-                }
-            }).start();
+            notifyUserAboutTakenOrder(order.get_userid());
             Intent intent1 = new Intent(DriverOrderDetailsActivity.this, DriverHomeActivity.class);
-            intent1.putExtra("route", order.get_route());
+            intent1.putExtra("order", order);
             startActivity(intent1);
             finish();
         });
+    }
+
+    private void notifyUserAboutTakenOrder(String userId) {
+        reference = database.getReference(Common.TOKEN_REFERENCE);
+        reference.child(userId).addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        if(snapshot.exists()){
+                            TokenModel token = snapshot.getValue(TokenModel.class);
+                            if (token != null){
+                                new Thread(() -> {
+                                    try {
+                                        UserUtils.sendOrderTakenNotification(token.getToken());
+                                    } catch (JSONException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }).start();
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+
+                    }
+                });
     }
 
     private String createStringFromOrder(String addresses) {

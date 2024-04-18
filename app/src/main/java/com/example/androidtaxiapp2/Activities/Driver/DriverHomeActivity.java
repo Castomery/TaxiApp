@@ -18,7 +18,6 @@ import android.location.Location;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -27,17 +26,18 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
-import com.example.androidtaxiapp2.Activities.Client.CreateGoupRideActivity;
-import com.example.androidtaxiapp2.Activities.Client.CreateRequestActivity;
 import com.example.androidtaxiapp2.Activities.OrderHistoryActivity;
-import com.example.androidtaxiapp2.Activities.Client.StatementActivity;
 import com.example.androidtaxiapp2.Activities.User.UserProfileActivity;
-import com.example.androidtaxiapp2.Activities.Driver.DriverTakeOrderActivity;
 import com.example.androidtaxiapp2.Enums.OrderStatus;
+import com.example.androidtaxiapp2.EventBus.DeclineOrder;
 import com.example.androidtaxiapp2.Models.Common;
 import com.example.androidtaxiapp2.Models.Order;
+import com.example.androidtaxiapp2.Models.TokenModel;
 import com.example.androidtaxiapp2.R;
+import com.example.androidtaxiapp2.Utils.UserUtils;
 import com.example.androidtaxiapp2.databinding.ActivityDriverHomeBinding;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import androidx.annotation.NonNull;
@@ -79,8 +79,12 @@ import com.mapbox.mapboxsdk.style.layers.LineLayer;
 import com.mapbox.mapboxsdk.style.layers.SymbolLayer;
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
 
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
+import org.json.JSONException;
+
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -94,16 +98,12 @@ import okhttp3.Response;
 
 public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyCallback, OnLocationClickListener, PermissionsListener, OnCameraTrackingChangedListener {
 
-    //protected AppBarConfiguration mAppBarConfiguration;
     protected DrawerLayout drawer;
-    //protected NavigationView navigationView;
-    //protected NavController navController;
-
     private ImageView menu;
     private LinearLayout home, account, orderHistory;
     protected ActivityDriverHomeBinding binding;
     private Button _becomeDriverbtn;
-
+    private Order currOrder;
     private static final String ICON_GEOJSON_SOURCE_ID = "icon-source-id";
     private static final String FIRST = "first";
     private static final String LAST = "last";
@@ -115,27 +115,25 @@ public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyC
     private MapboxOptimization optimizedClient;
     private PermissionsManager permissionsManager;
     private LocationComponent locationComponent;
-
-    private List<Point> stops = new ArrayList<>();
     private Point origin;
     private FloatingActionButton myLocationButton;
     private List<Point> destinations = new ArrayList<>();
     private boolean isInTrackingMode;
-
     private Point userCurrLocation;
-
-    //List<List<Point>> routes = new ArrayList<>();
-    OkHttpClient client;
-
     private FirebaseDatabase database;
     private DatabaseReference reference;
-//    private UUID currOrderUid;
-//    private int currPermutationId;
     private OkHttpClient okHttpClient;
     private Button startTripButton;
     private Button finishTripButton;
     private Button takeOrderButton;
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if(!EventBus.getDefault().isRegistered(this)){
+            EventBus.getDefault().register(this);
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -146,8 +144,7 @@ public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyC
 
         setContentView(binding.getRoot());
 
-        //setSupportActionBar(binding.appBarUserHome.toolbar);
-        drawer = binding.drawerLayout;
+        drawer = binding.driverDrawerLayout;
         menu = findViewById(R.id.menu);
         home = findViewById(R.id.home);
         account = findViewById(R.id.account);
@@ -169,39 +166,17 @@ public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyC
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
 
-        startTripButton.setOnClickListener(v -> {
-            startTripButton.setVisibility(View.GONE);
-            finishTripButton.setVisibility(View.GONE);
-        });
-
-        finishTripButton.setOnClickListener(v -> {
-            finishTripButton.setVisibility(View.GONE);
-            takeOrderButton.setVisibility(View.VISIBLE);
-            reloadMap();
-        });
-
         takeOrderButton.setOnClickListener(v -> {
             redirectActivity(DriverHomeActivity.this, DriverTakeOrderActivity.class);
-        });
-
-        startTripButton.setOnClickListener(v -> {
-            redirectActivity(DriverHomeActivity.this, CreateGoupRideActivity.class);
         });
 
         database = FirebaseDatabase.getInstance();
         reference = database.getReference(Common.OPTIMIZED_ROUTES_REFERENCE);
 
-
         account.setOnClickListener(v -> redirectActivity(DriverHomeActivity.this, UserProfileActivity.class));
         orderHistory.setOnClickListener(v -> redirectActivity(DriverHomeActivity.this, OrderHistoryActivity.class));
-        //navigationView = binding.navView;
-
-        // Custom initialization for user-specific data
-        checkIfHasActiveOrders();
 
         initializeDriver();
-
-
     }
 
     private void checkIfHasActiveOrders(){
@@ -212,10 +187,9 @@ public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyC
                 if(snapshot.exists()){
                     for (DataSnapshot childSnapshot : snapshot.getChildren()){
                         Order order = childSnapshot.getValue(Order.class);
-                        if (order!=null && order.get_orderStatus().equals(OrderStatus.InProgres.toString())){
-                            startTripButton.setVisibility(View.VISIBLE);
-                            finishTripButton.setVisibility(View.GONE);
-                            myLocationButton.setVisibility(View.GONE);
+                        if (order!=null && order.get_orderStatus().equals(OrderStatus.InProgress.toString())){
+                            getPoints(order.get_route());
+                            startTrip(order);
                             Toast.makeText(DriverHomeActivity.this,"There is active Order", Toast.LENGTH_SHORT).show();
                             return;
                         }
@@ -231,18 +205,31 @@ public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyC
         });
     }
 
+    private void startTrip(Order order){
+        takeOrderButton.setVisibility(View.GONE);
+        startTripButton.setVisibility(View.VISIBLE);
+        finishTripButton.setVisibility(View.GONE);
+        myLocationButton.setVisibility(View.GONE);
+        displayRouteToUser();
+
+        startTripButton.setOnClickListener(v -> {
+            startTripButton.setVisibility(View.GONE);
+            finishTripButton.setVisibility(View.VISIBLE);
+            displayRoute();
+        });
+
+        finishTripButton.setOnClickListener(v -> {
+            setfinishOrderStatus(order);
+            reloadMap();
+            finishTripButton.setVisibility(View.GONE);
+            takeOrderButton.setVisibility(View.VISIBLE);
+            myLocationButton.setVisibility(View.VISIBLE);
+        });
+
+    }
+
     private void reloadMap(){
         mapboxMap.setStyle(Style.MAPBOX_STREETS, style -> {
-
-            // Add origin and destination to the mapboxMap
-            //enableLocationComponent(style);
-//            showRoute.setOnClickListener(v -> {
-//
-            //initMarkerIconSymbolLayer(style);
-            //initOptimizedRouteLineLayer(style);
-//                addDestinationMarker(style,stops);
-//                getOptimizedRoute(style,stops);
-//            });
         });
     }
 
@@ -279,12 +266,6 @@ public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyC
     }
 
 //    @Override
-//    public boolean onCreateOptionsMenu(Menu menu) {
-//        getMenuInflater().inflate(R.menu.user_home, menu);
-//        return true;
-//    }
-
-//    @Override
 //    public void onDestroy() {
 //        super.onDestroy();
 //        binding = null;
@@ -297,6 +278,15 @@ public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyC
 //        }
 //        mapView.onDestroy();
 //    }
+
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if(EventBus.getDefault().hasSubscriberForEvent(DeclineOrder.class)){
+            EventBus.getDefault().removeStickyEvent(DeclineOrder.class);
+        }
+    }
 
     @Override
     protected void onPause(){
@@ -342,40 +332,17 @@ public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyC
     public void onMapReady(@NonNull MapboxMap mapboxMap) {
         this.mapboxMap = mapboxMap;
 
+        okHttpClient = new OkHttpClient();
         mapboxMap.setStyle(Style.MAPBOX_STREETS, style -> {
-
-            // Add origin and destination to the mapboxMap
-            enableLocationComponent(style);
-//            showRoute.setOnClickListener(v -> {
-//
-            //initMarkerIconSymbolLayer(style);
-            //initOptimizedRouteLineLayer(style);
-//                addDestinationMarker(style,stops);
-//                getOptimizedRoute(style,stops);
-//            });
+            checkIfHasActiveOrders();
         });
-
 
         Intent intent = getIntent();
 
-        if (intent!= null && intent.hasExtra("route")){
-            okHttpClient = new OkHttpClient();
-            takeOrderButton.setVisibility(View.GONE);
-            myLocationButton.setVisibility(View.GONE);
-            startTripButton.setVisibility(View.VISIBLE);
-            finishTripButton.setVisibility(View.GONE);
-            getPoints(intent);
-            displayRouteToUser();
-
-            startTripButton.setOnClickListener(v -> {
-                startTripButton.setVisibility(View.GONE);
-                finishTripButton.setVisibility(View.VISIBLE);
-                displayRoute();
-            });
-
-            finishTripButton.setOnClickListener(v -> {
-                reloadMap();
-            });
+        if (intent!= null && intent.hasExtra("order")){
+            currOrder = (Order) intent.getSerializableExtra("order");
+            getPoints(currOrder.get_route());
+            startTrip(currOrder);
         }
     }
 
@@ -385,8 +352,8 @@ public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyC
         });
     }
 
-    private void getPoints(Intent intent){
-        String[] routeStr = intent.getStringExtra("route").split(";");
+    private void getPoints(String route){
+        String[] routeStr = route.split(";");
         for (int i = 0; i < routeStr.length; i++){
             String[] cordsStr = routeStr[i].split(",");
             double lon = Double.parseDouble(cordsStr[0]);
@@ -629,11 +596,47 @@ public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyC
             }
         });
     }
+    @Subscribe(sticky = true,threadMode = ThreadMode.MAIN)
+    public void onDeclineOrder(DeclineOrder event){
+        reloadMap();
+        takeOrderButton.setVisibility(View.VISIBLE);
+        myLocationButton.setVisibility(View.VISIBLE);
+        startTripButton.setVisibility(View.GONE);
+        finishTripButton.setVisibility(View.GONE);
+        //recreate();
+    }
 
-//    @Override
-//    public boolean onSupportNavigateUp() {
-//        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_user_home);
-//        return NavigationUI.navigateUp(navController, mAppBarConfiguration)
-//                || super.onSupportNavigateUp();
-//    }
+    private void setfinishOrderStatus(Order order) {
+        order.set_orderStatus(OrderStatus.Done.toString());
+        reference = database.getReference(Common.ORDERS_REFERENCE);
+
+        reference.child(order.get_uid()).setValue(order).addOnCompleteListener(task -> notifyUserAboutOrderFinish(order.get_userid()));
+    }
+
+    private void notifyUserAboutOrderFinish(String userId)
+    {
+        reference = database.getReference(Common.TOKEN_REFERENCE);
+        reference.child(userId).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if(snapshot.exists()){
+                    TokenModel token = snapshot.getValue(TokenModel.class);
+                    if (token != null){
+                        new Thread(() -> {
+                            try {
+                                UserUtils.sendOrderFinishedNotification(token.getToken());
+                            } catch (JSONException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }).start();
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
+    }
 }

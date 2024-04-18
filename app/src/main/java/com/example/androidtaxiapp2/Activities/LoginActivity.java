@@ -87,17 +87,6 @@ public class LoginActivity extends AppCompatActivity {
    }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if(requestCode == RC_NOTIFICATION){
-            if(grantResults[0] == PackageManager.PERMISSION_GRANTED){
-                Toast.makeText(LoginActivity.this, "Granted", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
-
-    @Override
    protected void onStart(){
         super.onStart();
         FirebaseUser user= firebaseAuth.getCurrentUser();

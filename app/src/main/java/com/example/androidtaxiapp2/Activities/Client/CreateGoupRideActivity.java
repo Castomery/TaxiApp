@@ -129,7 +129,7 @@ public class CreateGoupRideActivity extends AppCompatActivity {
                     value.setText(feature.placeName());
                     value.setTextSize(20);
                     value.setTextColor(Color.parseColor("#000000"));
-                    value.setLayoutParams(new LinearLayout.LayoutParams(0, 50, 1.0f));
+                    value.setLayoutParams(new LinearLayout.LayoutParams(0, 80, 1.0f));
                     destinationLayout.addView(value);
 
                     // Create a delete button

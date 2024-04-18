@@ -55,13 +55,15 @@ public class DriverTakeOrderActivity extends AppCompatActivity implements Recycl
     }
 
     private void getUserOrders(RecyclerViewInterface recyclerViewInterface) {
-        reference.orderByChild("_orderStatus").equalTo(OrderStatus.InProgres.toString()).addListenerForSingleValueEvent(new ValueEventListener() {
+        reference.orderByChild("_orderStatus").equalTo(OrderStatus.LookingForDriver.toString()).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()){
                     for(DataSnapshot childSnapshot : snapshot.getChildren()){
                         Order order = childSnapshot.getValue(Order.class);
-                        availableOrders.add(order);
+                        if (order.get_driverid().isEmpty()){
+                            availableOrders.add(order);
+                        }
                     }
                     Order_RecyclerViewAdapter adapter = new Order_RecyclerViewAdapter(getBaseContext(),availableOrders, recyclerViewInterface);
                     recyclerView.setAdapter(adapter);

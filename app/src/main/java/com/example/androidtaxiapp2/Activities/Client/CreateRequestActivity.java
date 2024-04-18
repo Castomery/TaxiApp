@@ -179,7 +179,7 @@ public class CreateRequestActivity extends AppCompatActivity {
                 });
                 makeRequestOneCarBtn.setOnClickListener(v -> {
                     String uuid = UUID.randomUUID().toString();
-                    Order order= new Order(uuid,Common.currentUser.get_uid(),"", OrderStatus.InProgres.toString(), Calendar.getInstance().getTime().toString(),routeOneCar);
+                    Order order= new Order(uuid,Common.currentUser.get_uid(),"", OrderStatus.LookingForDriver.toString(), Calendar.getInstance().getTime().toString(),routeOneCar);
                     reference.child(uuid).setValue(order).addOnCompleteListener(task -> {
                         if (task.isSuccessful()){
 
@@ -188,11 +188,6 @@ public class CreateRequestActivity extends AppCompatActivity {
                             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP| Intent.FLAG_ACTIVITY_CLEAR_TASK| Intent.FLAG_ACTIVITY_NEW_TASK);
                             startActivity(intent);
                             finish();
-//                                Common.currentUser = user;
-//                                Intent intent = new Intent(RegisterActivity.this, UserHomeActivity.class);
-//                                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP| Intent.FLAG_ACTIVITY_CLEAR_TASK| Intent.FLAG_ACTIVITY_NEW_TASK);
-//                                startActivity(intent);
-//                                finish();
                         }else{
                             Toast.makeText(CreateRequestActivity.this,"Something went wrong", Toast.LENGTH_SHORT).show();
                         }
@@ -296,7 +291,7 @@ public class CreateRequestActivity extends AppCompatActivity {
                         public void onClick(View v) {
                             for (ShortestRoute route : recommendations){
                                 String uuid = UUID.randomUUID().toString();
-                                Order order= new Order(uuid,Common.currentUser.get_uid(),"", OrderStatus.InProgres.toString(), Calendar.getInstance().getTime().toString(),route);
+                                Order order= new Order(uuid,Common.currentUser.get_uid(),"", OrderStatus.InProgress.toString(), Calendar.getInstance().getTime().toString(),route);
                                 reference.child(uuid).setValue(order).addOnCompleteListener(task -> {
                                     if (task.isSuccessful()){
 

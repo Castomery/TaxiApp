@@ -11,7 +11,10 @@ import com.example.androidtaxiapp2.Models.Common;
 import com.example.androidtaxiapp2.Models.TokenModel;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -29,7 +32,6 @@ import okhttp3.Response;
 public class UserUtils {
 
     private static final String FCM_ENDPOINT = "https://fcm.googleapis.com/v1/projects/androidtaxiapp-3a893/messages:send";
-    private static final String YOUR_JWT_TOKEN = "ff09032a01d693547d532439d67427ad1bc54256";
 
     public static void updateToken(Context context, String token){
         TokenModel tokenModel = new TokenModel(token);
@@ -53,27 +55,14 @@ public class UserUtils {
 
     }
 
-    public static void sendOrderTakenNotification() throws JSONException {
+    private static void sendNotification(String notificationBody){
         OkHttpClient client = new OkHttpClient();
         FirebaseAccessToken firebaseAccessToken = new FirebaseAccessToken();
         String token = firebaseAccessToken.getAccessToken();
 
-
         MediaType JSON = MediaType.parse("application/json; charset=utf-8");
-        String deviceToken = "cdNAFV1TSxWaLN2RhvHz3_:APA91bE5Ok7r6n6rV8sgYPR0Rx3PJ4Ml9pk9DsaRBd8Po8n-nxE9ObyetrenyrRp5j33ZiirN7Pj6p1BI2HgveWPc18VRXfbZIgiRkLDqW3_NFaBreJ-PSRK_cn98Grw6bOo4yr2VJKW";
-        JSONObject payload = new JSONObject();
+        RequestBody body = RequestBody.create(JSON, notificationBody);
 
-        JSONObject message = new JSONObject();
-        message.put("token", deviceToken);
-
-        JSONObject notification = new JSONObject();
-        notification.put("body", "This is an FCM notification message!");
-        notification.put("title", "FCM Message");
-
-        message.put("data", notification);
-        payload.put("message", message);
-
-        RequestBody body = RequestBody.create(JSON, payload.toString());
         Request request = new Request.Builder()
                 .url(FCM_ENDPOINT)
                 .addHeader("Authorization", "Bearer " + token)
@@ -94,6 +83,85 @@ public class UserUtils {
                 Log.d("NOTIFICATION RESPONS",responseData);
             }
         });
+    }
 
+    public static void sendOrderTakenNotification(String toUserToken) throws JSONException {
+
+        JSONObject payload = new JSONObject();
+
+        JSONObject message = new JSONObject();
+        message.put("token", toUserToken);
+
+        JSONObject notification = new JSONObject();
+        notification.put("body", "Your order has been accepted");
+        notification.put("driver", Common.currentUser.get_name() + " " + Common.currentUser.get_lastname());
+        notification.put("car", "Black BMW Sign: 12345");
+        notification.put("title", Common.ACCEPT_ORDER_TITLE);
+
+        message.put("data", notification);
+        payload.put("message", message);
+
+        sendNotification(payload.toString());
+    }
+
+    public static void sendOrderCanceledNotification(String driverToken) throws JSONException {
+//        OkHttpClient client = new OkHttpClient();
+//        FirebaseAccessToken firebaseAccessToken = new FirebaseAccessToken();
+//        String  token = firebaseAccessToken.getAccessToken();
+
+
+        //MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+        JSONObject payload = new JSONObject();
+
+        JSONObject message = new JSONObject();
+        message.put("token", driverToken);
+
+        JSONObject notification = new JSONObject();
+        notification.put("body", "Order has been canceled");
+        notification.put("title", Common.CANCEL_ORDER_TITLE);
+
+        message.put("data", notification);
+        payload.put("message", message);
+
+        sendNotification(payload.toString());
+
+//        RequestBody body = RequestBody.create(JSON, payload.toString());
+//        Request request = new Request.Builder()
+//                .url(FCM_ENDPOINT)
+//                .addHeader("Authorization", "Bearer " + token)
+//                .addHeader("Content-Type", "application/json")
+//                .post(body)
+//                .build();
+//
+//        client.newCall(request).enqueue(new Callback() {
+//            @Override
+//            public void onFailure(Call call, IOException e) {
+//                e.printStackTrace();
+//            }
+//
+//            @Override
+//            public void onResponse(Call call, Response response) throws IOException {
+//                String responseData = response.body().string();
+//                // Handle the response from FCM
+//                Log.d("NOTIFICATION RESPONS",responseData);
+//            }
+//        });
+
+    }
+
+    public static void sendOrderFinishedNotification(String token) throws JSONException {
+        JSONObject payload = new JSONObject();
+
+        JSONObject message = new JSONObject();
+        message.put("token", token);
+
+        JSONObject notification = new JSONObject();
+        notification.put("body", "Order has been finished");
+        notification.put("title", Common.FINISH_ORDER_TITLE);
+
+        message.put("data", notification);
+        payload.put("message", message);
+
+        sendNotification(payload.toString());
     }
 }

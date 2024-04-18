@@ -68,7 +68,6 @@ dependencies {
 
     implementation("com.google.firebase:firebase-database:20.3.1")
     implementation ("com.google.auth:google-auth-library-oauth2-http:1.19.0")
-    //implementation("com.mapbox.maps:android:11.2.1")
 
     implementation ("com.mapbox.mapboxsdk:mapbox-sdk-services:6.15.0")
     implementation("com.mapbox.mapboxsdk:mapbox-android-sdk:9.7.0")
@@ -81,5 +80,7 @@ dependencies {
     annotationProcessor("com.github.bumptech.glide:compiler:4.11.0")
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.greenrobot:eventbus:3.3.1")
+
 
 }

@@ -15,9 +15,9 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -29,12 +29,14 @@ import com.bumptech.glide.Glide;
 import com.example.androidtaxiapp2.Activities.OrderHistoryActivity;
 import com.example.androidtaxiapp2.Activities.User.UserProfileActivity;
 import com.example.androidtaxiapp2.Enums.OrderStatus;
+import com.example.androidtaxiapp2.EventBus.AcceptOrder;
+import com.example.androidtaxiapp2.EventBus.FinishOrder;
 import com.example.androidtaxiapp2.Models.Common;
 import com.example.androidtaxiapp2.Models.Order;
 import com.example.androidtaxiapp2.R;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.appcompat.app.AppCompatActivity;
@@ -74,11 +76,14 @@ import com.mapbox.mapboxsdk.style.layers.LineLayer;
 import com.mapbox.mapboxsdk.style.layers.SymbolLayer;
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
 
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -90,11 +95,10 @@ import okhttp3.Response;
 
 public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCallback, OnLocationClickListener, PermissionsListener, OnCameraTrackingChangedListener {
 
-    //protected AppBarConfiguration mAppBarConfiguration;
     protected DrawerLayout drawer;
-    //protected NavigationView navigationView;
-    //protected NavController navController;
-
+    private CardView accept_layout;
+    private TextView driverInfoTextView;
+    private TextView carInfoTextView;
     private ImageView menu;
     private LinearLayout home, account, orderHistory;
     protected ActivityUserHomeBinding binding;
@@ -111,25 +115,22 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
     private MapboxOptimization optimizedClient;
     private PermissionsManager permissionsManager;
     private LocationComponent locationComponent;
-
-    private List<Point> stops = new ArrayList<>();
     private Point origin;
-    private FloatingActionButton myLocationButton;
     private List<Point> destinations = new ArrayList<>();
     private boolean isInTrackingMode;
-
-    List<List<Point>> routes = new ArrayList<>();
-    OkHttpClient client;
-
     private FirebaseDatabase database;
     private DatabaseReference reference;
-    private UUID currOrderUid;
-    private int currPermutationId;
     private OkHttpClient okHttpClient;
-
-    private Button showRoute;
+    private Button buildRouteBtn;
     private Button makeRequest;
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if(!EventBus.getDefault().isRegistered(this)){
+            EventBus.getDefault().register(this);
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -139,59 +140,43 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
         binding = ActivityUserHomeBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         //setSupportActionBar(binding.appBarUserHome.toolbar);
-        drawer = binding.drawerLayout;
+        drawer = binding.clientDrawerLayout;
         menu = findViewById(R.id.menu);
         home = findViewById(R.id.home);
         account = findViewById(R.id.account);
         orderHistory = findViewById(R.id.orderHistory);
+        accept_layout = findViewById(R.id.layout_accept);
+        driverInfoTextView = findViewById(R.id.driverInfo_name_text);
+        carInfoTextView = findViewById(R.id.driver_car_info_text);
         _becomeDriverbtn = findViewById(R.id.become_driver_btn);
-        showRoute = binding.createTrip;
+        buildRouteBtn = binding.createTrip;
         makeRequest = binding.createRequest;
-
-
-        menu.setOnClickListener(v -> openDrawer(drawer));
-
-        home.setOnClickListener(v -> recreate());
-        mapView = binding.mapView;
-        mapView.onCreate(savedInstanceState);
-        mapView.getMapAsync(this);
-
-        showRoute.setOnClickListener(v -> {
-            redirectActivity(UserHomeActivity.this, CreateGoupRideActivity.class);
-        });
-
+        _becomeDriverbtn = findViewById(R.id.become_driver_btn);
         database = FirebaseDatabase.getInstance();
         reference = database.getReference(Common.OPTIMIZED_ROUTES_REFERENCE);
 
-        checkIfHasActiveOrders();
-
-        _becomeDriverbtn.setOnClickListener(v -> {
-
-        });
-
-        account.setOnClickListener(v -> redirectActivity(UserHomeActivity.this, UserProfileActivity.class));
-        orderHistory.setOnClickListener(v -> redirectActivity(UserHomeActivity.this, OrderHistoryActivity.class));
-        //navigationView = binding.navView;
-
-
-        // Set up navigation
-//        mAppBarConfiguration = new AppBarConfiguration.Builder(
-//                R.id.nav_home, R.id.nav_user_profile)
-//                .setOpenableLayout(drawer)
-//                .build();
-//        navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_user_home);
-//        NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
-//        NavigationUI.setupWithNavController(navigationView, navController);
-
-        // Custom initialization for user-specific data
-        initializeUser();
-
-        _becomeDriverbtn = findViewById(R.id.become_driver_btn);
         _becomeDriverbtn.setOnClickListener(v -> {
             Intent intent = new Intent(UserHomeActivity.this, StatementActivity.class);
             startActivity(intent);
             finish();
         });
+
+        menu.setOnClickListener(v -> openDrawer(drawer));
+        account.setOnClickListener(v -> redirectActivity(UserHomeActivity.this, UserProfileActivity.class));
+        orderHistory.setOnClickListener(v -> redirectActivity(UserHomeActivity.this, OrderHistoryActivity.class));
+        home.setOnClickListener(v -> recreate());
+
+        buildRouteBtn.setOnClickListener(v -> {
+            redirectActivity(UserHomeActivity.this, CreateGoupRideActivity.class);
+        });
+
+        checkIfHasActiveOrders();
+
+        mapView = binding.clientMapView;
+        mapView.onCreate(savedInstanceState);
+        mapView.getMapAsync(this);
+
+        initializeUser();
 
     }
 
@@ -203,8 +188,8 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
                 if(snapshot.exists()){
                     for (DataSnapshot childSnapshot : snapshot.getChildren()){
                         Order order = childSnapshot.getValue(Order.class);
-                        if (order!=null && order.get_orderStatus().equals(OrderStatus.InProgres.toString())){
-                            showRoute.setVisibility(View.GONE);
+                        if (order!=null && (order.get_orderStatus().equals(OrderStatus.LookingForDriver.toString()) || order.get_orderStatus().equals(OrderStatus.InProgress.toString()))){
+                            buildRouteBtn.setVisibility(View.GONE);
                             makeRequest.setVisibility(View.GONE);
                             binding.focusLocation.setVisibility(View.GONE);
                             Toast.makeText(UserHomeActivity.this,"There is active Order", Toast.LENGTH_SHORT).show();
@@ -240,17 +225,6 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
     }
 
     private void initializeUser() {
-
-//        navigationView.setNavigationItemSelectedListener(item -> {
-//            if (item.getItemId() == R.id.nav_user_profile) {
-//                Intent intent = new Intent(UserHomeActivity.this, UserProfileActivity.class);
-//                startActivity(intent);
-//                finish();
-//            }
-//            return true;
-//        });
-
-        //View headerView = navigationView.getHeaderView(0);
         TextView txt_name = findViewById(R.id.txt_name);
         TextView txt_phone = findViewById(R.id.txt_phone);
         ImageView img  = findViewById(R.id.imageView);
@@ -263,26 +237,31 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
                     .into(img);
         }
     }
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        binding = null;
 
-//    @Override
-//    public boolean onCreateOptionsMenu(Menu menu) {
-//        getMenuInflater().inflate(R.menu.user_home, menu);
-//        return true;
-//    }
+        if (optimizedClient != null) {
+            optimizedClient.cancelCall();
+        }
+        if (mapView != null){
+            mapView.onDestroy();
+        }
 
-//    @Override
-//    public void onDestroy() {
-//        super.onDestroy();
-//        binding = null;
-//
-//        if (optimizedClient != null) {
-//            optimizedClient.cancelCall();
-//        }
-//        if(mapboxMap != null){
-//            mapboxMap.removeOnMapClickListener(this);
-//        }
-//        mapView.onDestroy();
-//    }
+        if (EventBus.getDefault().hasSubscriberForEvent(AcceptOrder.class)){
+            EventBus.getDefault().removeStickyEvent(AcceptOrder.class);
+        }
+        EventBus.getDefault().unregister(this);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if(EventBus.getDefault().hasSubscriberForEvent(AcceptOrder.class)){
+            EventBus.getDefault().removeStickyEvent(AcceptOrder.class);
+        }
+    }
 
     @Override
     protected void onPause(){
@@ -292,7 +271,6 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
 
     @Override
     public void onExplanationNeeded(List<String> list) {
-
     }
 
     @Override
@@ -316,7 +294,6 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
 
     @Override
     public void onCameraTrackingChanged(int currentMode) {
-
     }
 
     @Override
@@ -336,7 +313,7 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
 
         if (intent!= null && intent.hasExtra("origin") && intent.hasExtra("destinations")){
             okHttpClient = new OkHttpClient();
-            showRoute.setVisibility(View.GONE);
+            buildRouteBtn.setVisibility(View.GONE);
             binding.focusLocation.setVisibility(View.GONE);
             makeRequest.setVisibility(View.VISIBLE);
             setPoints(intent);
@@ -372,12 +349,12 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
         destinations = (List<Point>) intent.getSerializableExtra("destinations");
     }
 
+    private void reloadMap(){
+        mapboxMap.setStyle(Style.MAPBOX_STREETS, style -> {
+        });
+    }
+
     private void displayRoute() {
-
-//        List<Point> stops = new ArrayList<>();
-//        stops.add(origin);
-//        stops.addAll(destinations);
-
         mapboxMap.setStyle(Style.MAPBOX_STREETS, style -> {
             new Thread(() -> getRouteFromServer(style, origin,destinations)).start();
         });
@@ -591,6 +568,24 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
             public void onFailure(retrofit2.Call<OptimizationResponse> call, Throwable t) {
             }
         });
+    }
+
+    @Subscribe(sticky = true,threadMode = ThreadMode.MAIN)
+    public void onAcceptOrderEvent(AcceptOrder event){
+        driverInfoTextView.setText("Driver: " + event.getDriverName());
+        carInfoTextView.setText("Car: " + event.getCarInfo());
+
+        accept_layout.setVisibility(View.VISIBLE);
+
+        new Handler().postDelayed(() -> accept_layout.setVisibility(View.GONE), 5000); // 3 seconds delay
+    }
+
+    @Subscribe(sticky = true,threadMode = ThreadMode.MAIN)
+    public void onFinishOrderEvent(FinishOrder event){
+        reloadMap();
+        buildRouteBtn.setVisibility(View.VISIBLE);
+        binding.focusLocation.setVisibility(View.GONE);
+        recreate();
     }
 
 //    @Override

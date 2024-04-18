@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/layout_accept"
+        android:visibility="gone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_margin="8dp"
+        app:cardBackgroundColor="@color/black"
+        app:cardCornerRadius="8dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="16dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text = "Your order been accepted"
+                android:textColor="@color/white"
+                android:textSize="18dp"/>
+            <TextView
+                android:layout_marginTop="20dp"
+                android:layout_marginStart="20dp"
+                android:id="@+id/driverInfo_name_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="left"
+                android:text="Driver name: John"
+                android:textColor="@color/white"
+                android:textSize="16dp"/>
+            <TextView
+                android:layout_marginTop="20dp"
+                android:layout_marginStart="20dp"
+                android:id="@+id/driver_car_info_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="left"
+                android:text="Car info: Black BMW Sign:12382AD"
+                android:textColor="@color/white"
+                android:textSize="16dp"/>
+        </LinearLayout>
+
+    </androidx.cardview.widget.CardView>
+
+
+</FrameLayout>

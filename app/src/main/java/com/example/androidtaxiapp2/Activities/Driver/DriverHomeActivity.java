@@ -334,6 +334,7 @@ public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyC
 
         okHttpClient = new OkHttpClient();
         mapboxMap.setStyle(Style.MAPBOX_STREETS, style -> {
+            enableLocationComponent(style);
             checkIfHasActiveOrders();
         });
 
@@ -388,7 +389,7 @@ public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyC
 
         RequestBody requestBody = RequestBody.create(MediaType.parse("application/json"), body);
 
-        Request request = new Request.Builder().url("http://10.0.2.2:5249/api/Distribution/GetRoute?origin="+org)
+        Request request = new Request.Builder().url("http://192.168.0.211:5249/api/Distribution/GetRoute?origin="+org)
                 .post(requestBody)
                 .addHeader("accept", "text/plain")
                 .addHeader("Content-Type", "application/json")
@@ -398,7 +399,7 @@ public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyC
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 runOnUiThread(() -> {
-                    Toast.makeText(DriverHomeActivity.this,"Failed", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(DriverHomeActivity.this,e.getMessage(), Toast.LENGTH_SHORT).show();
                     Log.d("TAG", e.getMessage());
                 });
             }

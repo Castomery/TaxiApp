@@ -15,9 +15,11 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.androidtaxiapp2.Activities.Admin.AdminHomeActivity;
 import com.example.androidtaxiapp2.Activities.Driver.DriverHomeActivity;
 import com.example.androidtaxiapp2.Activities.SplashScreenActivity;
 import com.example.androidtaxiapp2.Activities.Client.UserHomeActivity;
+import com.example.androidtaxiapp2.Enums.Roles;
 import com.example.androidtaxiapp2.Models.Common;
 import com.example.androidtaxiapp2.Models.Role;
 import com.example.androidtaxiapp2.R;
@@ -159,15 +161,17 @@ public class UserProfileActivity extends AppCompatActivity {
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
                         if (snapshot.exists()){
                             Role role = snapshot.getValue(Role.class);
-                            if (role.get_name().equals("Client")){
+                            if (role.get_name().equals(Roles.Client.toString())){
                                 startActivity(new Intent(UserProfileActivity.this, UserHomeActivity.class));
                                 finish();
                             }
-                            else if(role.get_name().equals("Driver")){
+                            else if(role.get_name().equals(Roles.Driver.toString())){
                                 startActivity(new Intent(UserProfileActivity.this, DriverHomeActivity.class));
                                 finish();
                             }
-                            else{
+                            else if (role.get_name().equals(Roles.Admin.toString())){
+                                startActivity(new Intent(UserProfileActivity.this, AdminHomeActivity.class));
+                                finish();
                             }
                         }
                     }

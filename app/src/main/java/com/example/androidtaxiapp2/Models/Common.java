@@ -22,6 +22,8 @@ public class Common {
     public static final String OPTIMIZED_ROUTES_REFERENCE = "Optimized Routes";
     public static final String STATEMENTS_REFERENCE = "Statements";
     public static final String TOKEN_REFERENCE = "Tokens";
+    public static final String CAR_TYPES_REFERENCE="CarTypes";
+    public static final String BLOCKED_USERS = "BlockedUsers";
     public static final String NOTI_TITLE = "title";
     public static final String NOTI_CONTENT = "body";
     public static final String CANCEL_ORDER_TITLE = "Order canceled";
@@ -29,6 +31,7 @@ public class Common {
     public static final String FINISH_ORDER_TITLE = "Order finished";
     public static final String DRIVER_NAME = "driver";
     public static final String CAR_INFO = "car";
+
 
     public static User currentUser;
 
@@ -65,7 +68,7 @@ public class Common {
             NotificationCompat.Builder builder = new NotificationCompat.Builder(context,NOTIFICATION_CHANNEL_ID);
             builder.setContentTitle(title)
                     .setContentText(body)
-                    .setAutoCancel(true)
+                    .setAutoCancel(false)
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
                     .setDefaults(Notification.DEFAULT_VIBRATE)
                     .setSmallIcon(R.drawable.frontal_taxi_cab_svgrepo_com)

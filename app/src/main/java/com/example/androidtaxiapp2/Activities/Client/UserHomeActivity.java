@@ -14,6 +14,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.TextUtils;
@@ -356,11 +357,60 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
 
     private void displayRoute() {
         mapboxMap.setStyle(Style.MAPBOX_STREETS, style -> {
+            //new GetRouteTask().execute(origin, destinations);
             new Thread(() -> getRouteFromServer(style, origin,destinations)).start();
         });
     }
 
+    private class GetRouteTask extends AsyncTask<Object, Void, List<Point>> {
+
+        @Override
+        protected List<Point> doInBackground(Object... objects) {
+            Point origin = (Point) objects[0];
+            List<Point> destinations = (List<Point>) objects[1];
+
+            String body = getDestinationsAsString(destinations);
+            String org = origin.longitude() + "," + origin.latitude();
+            RequestBody requestBody = RequestBody.create(MediaType.parse("application/json"), body);
+
+            Request request = new Request.Builder()
+                    .url("http://192.168.0.211:5249/api/Distribution/GetRoute?origin=" + org)
+                    .post(requestBody)
+                    .addHeader("accept", "text/plain")
+                    .addHeader("Content-Type", "application/json")
+                    .build();
+
+            try {
+                Response response = okHttpClient.newCall(request).execute();
+                if (response.isSuccessful()) {
+                    Gson gson = new Gson();
+                    String json = response.body().string();
+                    List<String> points = gson.fromJson(json, List.class);
+                    return parseToPoints(points);
+                }
+            } catch (IOException e) {
+                Log.d("TAG", e.getMessage());
+            }
+
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(List<Point> routeCoord) {
+            if (routeCoord != null) {
+                initMarkerIconSymbolLayer(mapboxMap.getStyle(), origin);
+                initOptimizedRouteLineLayer(mapboxMap.getStyle());
+                addDestinationMarker(mapboxMap.getStyle(), routeCoord);
+                getOptimizedRoute(mapboxMap.getStyle(), routeCoord);
+                Log.d("TAG", routeCoord.toString());
+            } else {
+                Toast.makeText(UserHomeActivity.this, "Failed", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
     private void getRouteFromServer(@NonNull Style loadedMapStyle, Point origin, List<Point> destinations){
+        okHttpClient = new OkHttpClient();
 
         String body = getDestinationsAsString(destinations);
 
@@ -368,7 +418,7 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
 
         RequestBody requestBody = RequestBody.create(MediaType.parse("application/json"), body);
 
-        Request request = new Request.Builder().url("http://10.0.2.2:5249/api/Distribution/GetRoute?origin="+org)
+        Request request = new Request.Builder().url("http://192.168.0.211:5249/api/Distribution/GetRoute?origin="+org)
                 .post(requestBody)
                 .addHeader("accept", "text/plain")
                 .addHeader("Content-Type", "application/json")
@@ -386,22 +436,21 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
 
+                Gson gson = new Gson();
+                List<String> points = null;
+
+                try {
+                    String json = response.body().string();
+                    points = gson.fromJson(json, List.class);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                List<Point> routeCoord = parseToPoints(points);
+
                 runOnUiThread(() -> {
-                    Gson gson = new Gson();
-                    List<String> points = null;
-
-                    try {
-                        String json = response.body().string();
-                        points = gson.fromJson(json, List.class);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-
-                    List<Point> routeCoord = parseToPoints(points);
                     initMarkerIconSymbolLayer(loadedMapStyle, origin);
                     initOptimizedRouteLineLayer(loadedMapStyle);
                     addDestinationMarker(loadedMapStyle,routeCoord);
-                    Log.d("TAG", routeCoord.toString());
                     getOptimizedRoute(loadedMapStyle,routeCoord);
                 });
             }

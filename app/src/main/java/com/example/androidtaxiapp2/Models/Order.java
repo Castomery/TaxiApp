@@ -9,18 +9,20 @@ public class Order implements Serializable {
     private String _driverid;
     private String _orderStatus;
     private String _orderDate;
+    private String _carTypeId;
     private String _route;
     private String _price;
     private String _duration;
     private String _destributionPrice;
     private String _addresses;
 
-    public Order( String uuid,String _userid, String _driverid, String _orderStatus, String _orderDate, ShortestRoute _route) {
+    public Order( String uuid,String _userid, String _driverid, String _orderStatus, String _orderDate,String _carType, ShortestRoute _route) {
         this._uid = uuid;
         this._userid = _userid;
         this._driverid = _driverid;
         this._orderStatus = _orderStatus;
         this._orderDate = _orderDate;
+        this._carTypeId = _carType;
         this._route = String.join(";",_route.route);
         this._price = String.valueOf(_route.totalPrice);
         this._duration = String.valueOf(_route.duration);
@@ -32,6 +34,14 @@ public class Order implements Serializable {
 
     public Order(){
 
+    }
+
+    public String get_carTypeId() {
+        return _carTypeId;
+    }
+
+    public void set_carTypeId(String _carTypeId) {
+        this._carTypeId = _carTypeId;
     }
 
     public String get_uid() {

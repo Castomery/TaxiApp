@@ -18,6 +18,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.androidtaxiapp2.Activities.Admin.AdminHomeActivity;
 import com.example.androidtaxiapp2.Activities.Client.UserHomeActivity;
 import com.example.androidtaxiapp2.Activities.Driver.DriverHomeActivity;
 import com.example.androidtaxiapp2.Models.Common;
@@ -92,13 +93,45 @@ public class LoginActivity extends AppCompatActivity {
         FirebaseUser user= firebaseAuth.getCurrentUser();
         if(user !=null){
             if(user.isEmailVerified()){
-                Toast.makeText(LoginActivity.this,"Already Logged in", Toast.LENGTH_SHORT).show();
-                setCurrentUser();
+                checkIfUserBlocked(user.getUid());
+                //setCurrentUser();
             }
         }
    }
 
+    private void checkIfUserBlocked(String uid) {
+        FirebaseDatabase.getInstance().getReference(Common.BLOCKED_USERS)
+                .orderByChild("_userId")
+                .equalTo(uid).addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        if(snapshot.exists()){
+                            for (DataSnapshot snapshot1 : snapshot.getChildren()){
+                                if (snapshot1.exists()){
+                                    Toast.makeText(LoginActivity.this,"User is blocked", Toast.LENGTH_SHORT).show();
+                                }
+                                else{
+                                    Toast.makeText(LoginActivity.this,"Logged in", Toast.LENGTH_SHORT).show();
+                                    setCurrentUser();
+                                }
+                            }
+                        }
+                        else{
+                            Toast.makeText(LoginActivity.this,"Logged in", Toast.LENGTH_SHORT).show();
+                            setCurrentUser();
+                        }
+
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+
+                    }
+                });
+    }
+
     private void setCurrentUser() {
+        reference = database.getReference(Common.USERS_REFERENCE);
         String uid = FirebaseAuth.getInstance().getCurrentUser().getUid().toString();
         reference.child(uid)
                 .addValueEventListener(new ValueEventListener() {
@@ -123,42 +156,36 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void loginUser(String email, String password) {
-        firebaseAuth.signInWithEmailAndPassword(email,password).addOnCompleteListener(new OnCompleteListener<AuthResult>() {
-            @Override
-            public void onComplete(@NonNull Task<AuthResult> task) {
-                if (task.isSuccessful()){
+        firebaseAuth.signInWithEmailAndPassword(email,password).addOnCompleteListener(task -> {
+            if (task.isSuccessful()){
 
-
-                    FirebaseUser user = firebaseAuth.getCurrentUser();
-
-                    if(user.isEmailVerified()){
-                        Toast.makeText(LoginActivity.this,"Logged in", Toast.LENGTH_SHORT).show();
-                        setCurrentUser();
-                    }
-                    else{
-                        user.sendEmailVerification();
-                        firebaseAuth.signOut();
-                        showAlertDialog();
-                    }
+                FirebaseUser user = firebaseAuth.getCurrentUser();
+                if(user.isEmailVerified()){
+                    checkIfUserBlocked(user.getUid());
                 }
-                else {
-                    try{
-                        throw task.getException();
-                    }
-                    catch (FirebaseAuthInvalidUserException e){
-                        _loginEmail.setError("User doesn`t exist");
-                        _loginEmail.requestFocus();
-                    }
-                    catch (FirebaseAuthInvalidCredentialsException e){
-                        _loginEmail.setError("Invalid credentials");
-                        _loginEmail.requestFocus();
-                    }
-                    catch (Exception e){
-                        Log.e(TAG, e.getMessage());
-                        Toast.makeText(LoginActivity.this,e.getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-
+                else{
+                    user.sendEmailVerification();
+                    firebaseAuth.signOut();
+                    showAlertDialog();
                 }
+            }
+            else {
+                try{
+                    throw task.getException();
+                }
+                catch (FirebaseAuthInvalidUserException e){
+                    _loginEmail.setError("User doesn`t exist");
+                    _loginEmail.requestFocus();
+                }
+                catch (FirebaseAuthInvalidCredentialsException e){
+                    _loginEmail.setError("Invalid credentials");
+                    _loginEmail.requestFocus();
+                }
+                catch (Exception e){
+                    Log.e(TAG, e.getMessage());
+                    Toast.makeText(LoginActivity.this,e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+
             }
         });
     }
@@ -181,7 +208,8 @@ public class LoginActivity extends AppCompatActivity {
                                 finish();
                             }
                             else{
-                                Log.d("TAG"," no if Role:" + role);
+                                startActivity(new Intent(LoginActivity.this, AdminHomeActivity.class));
+                                finish();
                             }
                         }
                     }

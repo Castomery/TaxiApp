@@ -29,7 +29,7 @@ import java.util.UUID;
 public class Users_RecyclerViewAdapter extends RecyclerView.Adapter<Users_RecyclerViewAdapter.UsersViewHolder>{
 
     private Context context;
-    private List<User> users = new ArrayList<>();
+    private List<User> users;
 
     public Users_RecyclerViewAdapter(Context context, List<User> users){
         this.context = context;

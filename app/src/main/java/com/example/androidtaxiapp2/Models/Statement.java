@@ -1,14 +1,26 @@
 package com.example.androidtaxiapp2.Models;
 
-public class Statement {
+import java.io.Serializable;
+
+public class Statement implements Serializable {
+    private String _uid;
     private String _userid;
     private String _statementText;
     private String _statementDate;
 
-    public Statement( String userId, String statementText, String date){
+    public Statement( String uid, String userId, String statementText, String date){
+        _uid = uid;
         _userid = userId;
         _statementText = statementText;
         _statementDate = date;
+    }
+
+    public String get_uid() {
+        return _uid;
+    }
+
+    public void set_uid(String _uid) {
+        this._uid = _uid;
     }
 
     public Statement(){}

@@ -19,6 +19,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.Calendar;
+import java.util.UUID;
 
 public class StatementActivity extends AppCompatActivity {
 
@@ -52,9 +53,10 @@ public class StatementActivity extends AppCompatActivity {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (!snapshot.exists()){
+                    String uid = UUID.randomUUID().toString();
                     String statementStr = statementText.getText().toString();
-                    Statement statement = new Statement(Common.currentUser.get_uid(), statementStr, Calendar.getInstance().getTime().toString());
-                    reference.push().setValue(statement).addOnCompleteListener(task -> {
+                    Statement statement = new Statement(uid,Common.currentUser.get_uid(), statementStr, Calendar.getInstance().getTime().toString());
+                    reference.child(uid).setValue(statement).addOnCompleteListener(task -> {
                         if(task.isSuccessful()){
                             Toast.makeText(StatementActivity.this,"Statement created", Toast.LENGTH_SHORT).show();
                         }

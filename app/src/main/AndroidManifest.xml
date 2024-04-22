@@ -17,6 +17,18 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
         <activity
+            android:name=".Activities.Admin.BlockedUsersListActivity"
+            android:exported="false" />
+        <activity
+            android:name=".Activities.Admin.StatementDetailsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".Activities.Admin.StatementsListActivity"
+            android:exported="false" />
+        <activity
+            android:name=".Activities.Admin.AddCarActivity"
+            android:exported="false" />
+        <activity
             android:name=".Activities.Admin.UsersListActivity"
             android:exported="false" />
         <activity

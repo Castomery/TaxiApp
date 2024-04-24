@@ -1,6 +1,8 @@
 package com.example.androidtaxiapp2.Models;
 
-public class CarTypes {
+import java.io.Serializable;
+
+public class CarTypes implements Serializable {
     private String _uid;
     private String _name;
     private double _priceForCar;

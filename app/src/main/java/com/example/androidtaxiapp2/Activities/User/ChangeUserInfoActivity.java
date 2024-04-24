@@ -37,7 +37,7 @@ public class ChangeUserInfoActivity extends AppCompatActivity {
         editTextName = findViewById(R.id.change_data_textView_show_firstname);
         editTextSurname = findViewById(R.id.change_data_textView_show_surname);
         editTextPhone = findViewById(R.id.change_data_textView_show_phone);
-        updateButton = findViewById(R.id.save_data_btn);
+        updateButton = findViewById(R.id.save_new_user_info_btn);
         backButton = findViewById(R.id.change_data_btn_back);
 
         String mobileRegex = "\\+?3?8?0\\d{9}";

@@ -50,6 +50,8 @@ public class AdminHomeActivity extends AppCompatActivity {
         addCar.setOnClickListener(v -> redirectActivity(AdminHomeActivity.this, AddCarActivity.class));
         statementsList.setOnClickListener(v -> redirectActivity(AdminHomeActivity.this, StatementsListActivity.class));
         blockedUsersList.setOnClickListener(v -> redirectActivity(AdminHomeActivity.this, BlockedUsersListActivity.class));
+        categoryPrices.setOnClickListener(v -> redirectActivity(AdminHomeActivity.this, CategoryPricesActivity.class));
+        assignDriverList.setOnClickListener(v -> redirectActivity(AdminHomeActivity.this, CarListActivity.class));
     }
 
     private void redirectActivity(Activity activity, Class secondActivity){

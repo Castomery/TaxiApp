@@ -13,6 +13,7 @@ import com.example.androidtaxiapp2.Activities.Client.ClientOrderDetailsActivity;
 import com.example.androidtaxiapp2.Adapters.Order_RecyclerViewAdapter;
 import com.example.androidtaxiapp2.Enums.OrderStatus;
 import com.example.androidtaxiapp2.Interfaces.RecyclerViewInterface;
+import com.example.androidtaxiapp2.Models.Car;
 import com.example.androidtaxiapp2.Models.Common;
 import com.example.androidtaxiapp2.Models.Order;
 import com.example.androidtaxiapp2.R;
@@ -55,27 +56,53 @@ public class DriverTakeOrderActivity extends AppCompatActivity implements Recycl
     }
 
     private void getUserOrders(RecyclerViewInterface recyclerViewInterface) {
-        reference.orderByChild("_orderStatus").equalTo(OrderStatus.LookingForDriver.toString()).addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (snapshot.exists()){
-                    for(DataSnapshot childSnapshot : snapshot.getChildren()){
-                        Order order = childSnapshot.getValue(Order.class);
-                        if (order.get_driverid().isEmpty()){
-                            availableOrders.add(order);
-                        }
-                    }
-                    Order_RecyclerViewAdapter adapter = new Order_RecyclerViewAdapter(getBaseContext(),availableOrders, recyclerViewInterface);
-                    recyclerView.setAdapter(adapter);
-                    recyclerView.setLayoutManager(new LinearLayoutManager(getBaseContext()));
-                }
-            }
 
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
+        FirebaseDatabase.getInstance().getReference(Common.CARS_REFERENCE)
+                .orderByChild("_driverId")
+                .equalTo(Common.currentUser.get_uid())
+                        .addListenerForSingleValueEvent(new ValueEventListener() {
+                            @Override
+                            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                                if (snapshot.exists()){
+                                    for (DataSnapshot child : snapshot.getChildren()){
+                                        Car car = child.getValue(Car.class);
+                                        getOrders(recyclerViewInterface,car.get_carTypeId());
+                                    }
+                                }
+                            }
 
-            }
-        });
+                            @Override
+                            public void onCancelled(@NonNull DatabaseError error) {
+
+                            }
+                        });
+    }
+
+    private void getOrders( RecyclerViewInterface recyclerViewInterface ,String carTypeId) {
+        FirebaseDatabase.getInstance().getReference(Common.ORDERS_REFERENCE)
+                        .orderByChild("_carTypeId")
+                        .equalTo(carTypeId)
+                        .addListenerForSingleValueEvent(new ValueEventListener() {
+                            @Override
+                            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                                if(snapshot.exists()){
+                                    for (DataSnapshot child : snapshot.getChildren()){
+                                        Order order = child.getValue(Order.class);
+                                        if (order.get_orderStatus().equals(OrderStatus.LookingForDriver.toString())){
+                                            availableOrders.add(order);
+                                        }
+                                    }
+                                    Order_RecyclerViewAdapter adapter = new Order_RecyclerViewAdapter(getBaseContext(),availableOrders, recyclerViewInterface);
+                                    recyclerView.setAdapter(adapter);
+                                    recyclerView.setLayoutManager(new LinearLayoutManager(getBaseContext()));
+                                }
+                            }
+
+                            @Override
+                            public void onCancelled(@NonNull DatabaseError error) {
+
+                            }
+                        });
     }
 
     @Override

@@ -23,6 +23,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class OrderHistoryActivity extends AppCompatActivity implements RecyclerViewInterface {
@@ -63,6 +64,7 @@ public class OrderHistoryActivity extends AppCompatActivity implements RecyclerV
                         Order order = childSnapshot.getValue(Order.class);
                         userOrders.add(order);
                     }
+                    Collections.sort(userOrders);
                     Order_RecyclerViewAdapter adapter = new Order_RecyclerViewAdapter(getBaseContext(),userOrders, recyclerViewInterface);
                     recyclerView.setAdapter(adapter);
                     recyclerView.setLayoutManager(new LinearLayoutManager(getBaseContext()));

@@ -1,9 +1,12 @@
 package com.example.androidtaxiapp2.Models;
 
 import java.io.Serializable;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 
-public class Order implements Serializable {
+public class Order implements Serializable, Comparable<Order>{
     private String _uid;
     private String _userid;
     private String _driverid;
@@ -124,4 +127,16 @@ public class Order implements Serializable {
         this._addresses = _addresses;
     }
 
+    @Override
+    public int compareTo(Order o) {
+        SimpleDateFormat format = new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy");
+        try {
+            Date thisDate = format.parse(this._orderDate);
+            Date otherDate = format.parse(o._orderDate);
+            return otherDate.compareTo(thisDate);
+        } catch (ParseException e) {
+            e.printStackTrace();
+            return 0; // Or handle the exception according to your needs
+        }
+    }
 }

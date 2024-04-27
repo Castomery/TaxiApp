@@ -1,5 +1,6 @@
 package com.example.androidtaxiapp2.Activities.User;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
@@ -9,6 +10,8 @@ import android.widget.TextView;
 
 import com.example.androidtaxiapp2.Models.Common;
 import com.example.androidtaxiapp2.R;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
@@ -43,7 +46,7 @@ public class ChangeUserInfoActivity extends AppCompatActivity {
         String mobileRegex = "\\+?3?8?0\\d{9}";
 
 
-        displayeUserInfo();
+        displayUserInfo();
 
         backButton.setOnClickListener(v -> {
             goBackToUserProfile();
@@ -63,15 +66,20 @@ public class ChangeUserInfoActivity extends AppCompatActivity {
                 editTextPhone.requestFocus();
             }
             else {
-                reference.child("_name").setValue(name);
-                reference.child("_lastname").setValue(surname);
-                reference.child("_phone").setValue(phone);
-                goBackToUserProfile();
+                changeUserData(name,surname,phone);
             }
         });
     }
 
-    private void displayeUserInfo(){
+    private void changeUserData(String name, String surname, String phone) {
+        Common.currentUser.set_name(name);
+        Common.currentUser.set_lastname(surname);
+        Common.currentUser.set_phone(phone);
+
+        reference.setValue(Common.currentUser).addOnCompleteListener(task -> goBackToUserProfile());
+    }
+
+    private void displayUserInfo(){
         editTextName.setText(Common.currentUser.get_name());
         editTextSurname.setText(Common.currentUser.get_lastname());
         editTextPhone.setText(Common.currentUser.get_phone());

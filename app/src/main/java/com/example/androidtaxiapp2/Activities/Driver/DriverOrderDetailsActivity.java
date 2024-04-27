@@ -9,6 +9,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import com.example.androidtaxiapp2.Enums.OrderStatus;
+import com.example.androidtaxiapp2.Models.Car;
 import com.example.androidtaxiapp2.Models.Common;
 import com.example.androidtaxiapp2.Models.Order;
 import com.example.androidtaxiapp2.Models.TokenModel;
@@ -30,6 +31,7 @@ public class DriverOrderDetailsActivity extends AppCompatActivity {
     private Button backButton;
     private Button takeOrderBtn;
     private ActivityDriverOrderDetailsBinding binding;
+    private Order currOrder;
 
     private FirebaseDatabase database;
     private DatabaseReference reference;
@@ -46,11 +48,11 @@ public class DriverOrderDetailsActivity extends AppCompatActivity {
 
         Intent intent = getIntent();
 
-        Order order = (Order) intent.getSerializableExtra("order");
+       currOrder = (Order) intent.getSerializableExtra("order");
 
-        String addressesStr = createStringFromOrder(order.get_addresses());
-        String priceStr = "Price: " + order.get_price();
-        String durationStr = "Duration: " + order.get_duration();
+        String addressesStr = createStringFromOrder(currOrder.get_addresses());
+        String priceStr = "Price: " + currOrder.get_price();
+        String durationStr = "Duration: " + currOrder.get_duration();
 
         addressesTextView = binding.driverOrderDetailsAddressesTextView;
         priceTextView = binding.driverOrderDetailsPriceTextView;
@@ -69,21 +71,21 @@ public class DriverOrderDetailsActivity extends AppCompatActivity {
         });
 
         takeOrderBtn.setOnClickListener(v -> {
-            checkIfOrderStillAvailable(order.get_uid());
-            setDriverToOrder(order);
+            checkIfOrderStillAvailable();
+            setDriverToOrder();
         });
 
         setContentView(binding.getRoot());
     }
 
-    private void checkIfOrderStillAvailable(String orderId) {
-        reference.child(orderId).addListenerForSingleValueEvent(new ValueEventListener() {
+    private void checkIfOrderStillAvailable() {
+        reference.child(currOrder.get_uid()).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()){
                     Order order = snapshot.getValue(Order.class);
                     if (order.get_driverid().isEmpty()){
-                        setDriverToOrder(order);
+                        setDriverToOrder();
                     }
                 }
             }
@@ -95,19 +97,42 @@ public class DriverOrderDetailsActivity extends AppCompatActivity {
         });
     }
 
-    private void setDriverToOrder(Order order) {
-        order.set_driverid(Common.currentUser.get_uid());
-        order.set_orderStatus(OrderStatus.InProgress.toString());
-        reference.child(order.get_uid()).setValue(order).addOnCompleteListener(task -> {
-            notifyUserAboutTakenOrder(order.get_userid());
-            Intent intent1 = new Intent(DriverOrderDetailsActivity.this, DriverHomeActivity.class);
-            intent1.putExtra("order", order);
-            startActivity(intent1);
-            finish();
+    private void setDriverToOrder() {
+        currOrder.set_driverid(Common.currentUser.get_uid());
+        currOrder.set_orderStatus(OrderStatus.InProgress.toString());
+        reference.child(currOrder.get_uid()).setValue(currOrder).addOnCompleteListener(task -> {
+            getDriverCar();
         });
     }
 
-    private void notifyUserAboutTakenOrder(String userId) {
+    private void getDriverCar() {
+
+        FirebaseDatabase.getInstance().getReference(Common.CARS_REFERENCE)
+                .orderByChild("_driverId")
+                .equalTo(Common.currentUser.get_uid())
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        if (snapshot.exists()){
+                            for(DataSnapshot child : snapshot.getChildren()){
+                                Car car = child.getValue(Car.class);
+                                notifyUserAboutTakenOrder(car.get_carModel(),car.get_carPlate(),currOrder.get_userid());
+                                Intent intent1 = new Intent(DriverOrderDetailsActivity.this, DriverHomeActivity.class);
+                                intent1.putExtra("order", currOrder);
+                                startActivity(intent1);
+                                finish();
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+
+                    }
+                });
+    }
+
+    private void notifyUserAboutTakenOrder(String carModel, String carPlate, String userId) {
         reference = database.getReference(Common.TOKEN_REFERENCE);
         reference.child(userId).addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
@@ -117,7 +142,7 @@ public class DriverOrderDetailsActivity extends AppCompatActivity {
                             if (token != null){
                                 new Thread(() -> {
                                     try {
-                                        UserUtils.sendOrderTakenNotification(token.getToken());
+                                        UserUtils.sendOrderTakenNotification(token.getToken(), carModel, carPlate);
                                     } catch (JSONException e) {
                                         throw new RuntimeException(e);
                                     }

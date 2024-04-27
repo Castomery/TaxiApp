@@ -407,7 +407,7 @@ public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyC
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
 
-                runOnUiThread(() -> {
+
                     Gson gson = new Gson();
                     List<String> points = null;
 
@@ -417,8 +417,9 @@ public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyC
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
-
                     List<Point> routeCoord = parseToPoints(points);
+
+                runOnUiThread(() -> {
                     initMarkerIconSymbolLayer(loadedMapStyle, origin);
                     initOptimizedRouteLineLayer(loadedMapStyle);
                     addDestinationMarkers(loadedMapStyle,routeCoord);

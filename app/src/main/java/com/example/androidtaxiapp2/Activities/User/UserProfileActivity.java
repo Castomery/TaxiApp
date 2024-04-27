@@ -85,13 +85,11 @@ public class UserProfileActivity extends AppCompatActivity {
         _changePassButton.setOnClickListener(v -> {
             Intent intent = new Intent(UserProfileActivity.this, ChangePasswordActivity.class);
             startActivity(intent);
-            finish();
         });
 
         _changeDataButton.setOnClickListener(v -> {
             Intent intent = new Intent(UserProfileActivity.this, ChangeUserInfoActivity.class);
             startActivity(intent);
-            finish();
         });
 
         _deleteButton.setOnClickListener(v -> {
@@ -106,7 +104,6 @@ public class UserProfileActivity extends AppCompatActivity {
                                 Common.currentUser = null;
                                 Intent intent = new Intent(UserProfileActivity.this, SplashScreenActivity.class);
                                 startActivity(intent);
-                                finish();
                             }
                             else{
                                 Toast.makeText(UserProfileActivity.this,task.getException().getMessage(),Toast.LENGTH_SHORT).show();
@@ -138,7 +135,6 @@ public class UserProfileActivity extends AppCompatActivity {
                         Intent intent = new Intent(UserProfileActivity.this, SplashScreenActivity.class);
                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK| Intent.FLAG_ACTIVITY_CLEAR_TASK);
                         startActivity(intent);
-                        finish();
                     })
                     .setCancelable(false);
             AlertDialog alertDialog = builder.create();
@@ -154,6 +150,12 @@ public class UserProfileActivity extends AppCompatActivity {
 
     }
 
+    private void redirectActivity(Activity activity, Class secondActivity){
+        Intent intent = new Intent(activity,secondActivity);
+        //intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        activity.startActivity(intent);
+    }
+
     private void goToHomeActivity(){
         database.getReference(Common.ROLES_REFERENCE).child(Common.currentUser.get_roleId())
                 .addListenerForSingleValueEvent(new ValueEventListener() {
@@ -162,16 +164,13 @@ public class UserProfileActivity extends AppCompatActivity {
                         if (snapshot.exists()){
                             Role role = snapshot.getValue(Role.class);
                             if (role.get_name().equals(Roles.Client.toString())){
-                                startActivity(new Intent(UserProfileActivity.this, UserHomeActivity.class));
-                                finish();
+                                redirectActivity(UserProfileActivity.this, UserHomeActivity.class);
                             }
                             else if(role.get_name().equals(Roles.Driver.toString())){
-                                startActivity(new Intent(UserProfileActivity.this, DriverHomeActivity.class));
-                                finish();
+                                redirectActivity(UserProfileActivity.this, DriverHomeActivity.class);
                             }
                             else if (role.get_name().equals(Roles.Admin.toString())){
-                                startActivity(new Intent(UserProfileActivity.this, AdminHomeActivity.class));
-                                finish();
+                                redirectActivity(UserProfileActivity.this, AdminHomeActivity.class);
                             }
                         }
                     }

@@ -6,15 +6,11 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
-import com.example.androidtaxiapp2.Activities.Driver.DriverOrderDetailsActivity;
 import com.example.androidtaxiapp2.Models.Common;
 import com.example.androidtaxiapp2.Models.TokenModel;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -85,7 +81,7 @@ public class UserUtils {
         });
     }
 
-    public static void sendOrderTakenNotification(String toUserToken) throws JSONException {
+    public static void sendOrderTakenNotification(String toUserToken, String carModel, String carPlate) throws JSONException {
 
         JSONObject payload = new JSONObject();
 
@@ -95,7 +91,7 @@ public class UserUtils {
         JSONObject notification = new JSONObject();
         notification.put("body", "Your order has been accepted");
         notification.put("driver", Common.currentUser.get_name() + " " + Common.currentUser.get_lastname());
-        notification.put("car", "Black BMW Sign: 12345");
+        notification.put("car", carModel + " " + carPlate);
         notification.put("title", Common.ACCEPT_ORDER_TITLE);
 
         message.put("data", notification);

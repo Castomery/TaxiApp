@@ -60,7 +60,6 @@ public class ChangePasswordActivity extends AppCompatActivity {
             }
             else{
                 updatePassword(pass, npass);
-                goToUserProfile();
             }
         });
     }
@@ -77,23 +76,19 @@ public class ChangePasswordActivity extends AppCompatActivity {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         AuthCredential authCredential = EmailAuthProvider.getCredential(user.getEmail(),pass);
 
-        user.reauthenticate(authCredential).addOnSuccessListener(new OnSuccessListener<Void>() {
+        user.reauthenticate(authCredential).addOnSuccessListener(unused -> user.updatePassword(newPassword).addOnCompleteListener(new OnCompleteListener<Void>() {
             @Override
-            public void onSuccess(Void unused) {
-                user.updatePassword(newPassword).addOnCompleteListener(new OnCompleteListener<Void>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Void> task) {
-                        reference.child("_password").setValue(newPassword);
-                        Toast.makeText(ChangePasswordActivity.this, "Password changed successfully", Toast.LENGTH_SHORT).show();
-                    }
-                }).addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Toast.makeText(ChangePasswordActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-                });
+            public void onComplete(@NonNull Task<Void> task) {
+                reference.child("_password").setValue(newPassword);
+                Toast.makeText(ChangePasswordActivity.this, "Password changed successfully", Toast.LENGTH_SHORT).show();
+                goToUserProfile();
             }
         }).addOnFailureListener(new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                Toast.makeText(ChangePasswordActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        })).addOnFailureListener(new OnFailureListener() {
             @Override
             public void onFailure(@NonNull Exception e) {
                 Toast.makeText(ChangePasswordActivity.this,e.getMessage(),Toast.LENGTH_SHORT).show();

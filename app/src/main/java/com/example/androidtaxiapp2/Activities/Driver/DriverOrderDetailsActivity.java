@@ -99,7 +99,7 @@ public class DriverOrderDetailsActivity extends AppCompatActivity {
 
     private void setDriverToOrder() {
         currOrder.set_driverid(Common.currentUser.get_uid());
-        currOrder.set_orderStatus(OrderStatus.InProgress.toString());
+        currOrder.set_orderStatus(OrderStatus.WaitingForDriver.toString());
         reference.child(currOrder.get_uid()).setValue(currOrder).addOnCompleteListener(task -> {
             getDriverCar();
         });

@@ -22,6 +22,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 
 public class CreateGoupRideActivity extends AppCompatActivity {
 
@@ -29,6 +30,7 @@ public class CreateGoupRideActivity extends AppCompatActivity {
     private ActivityCreateGoupRideBinding binding;
     private Boolean onSetOriginClicked = false;
     private Boolean onSetDestinationClicked = false;
+    private Point currLocation;
     private Point origin;
     private List<Point> destinations = new ArrayList<>();
     private HashMap<String,String> addresses = new HashMap<>();
@@ -46,6 +48,8 @@ public class CreateGoupRideActivity extends AppCompatActivity {
 
         setContentView(binding.getRoot());
         layout = binding.destinationContainer;
+
+        currLocation = (Point) getIntent().getSerializableExtra("currLocation");
 
         backButton = binding.setRouteBtnBack;
 
@@ -88,6 +92,8 @@ public class CreateGoupRideActivity extends AppCompatActivity {
                 .placeOptions(PlaceOptions.builder()
                         .backgroundColor(Color.parseColor("#ffffff"))
                         .hint("Enter Address")
+                        .country(new Locale("uk","UA"))
+                        .proximity(currLocation)
                         .build())
                 .build(CreateGoupRideActivity.this);
 
@@ -115,7 +121,7 @@ public class CreateGoupRideActivity extends AppCompatActivity {
                 onSetOriginClicked = false;
             }
             else if (onSetDestinationClicked){
-                if (!destinations.contains((Point) feature.geometry())){
+                if (!destinations.contains((Point) feature.geometry()) && !origin.equals((Point) feature.geometry())){
                     LinearLayout destinationLayout = new LinearLayout(this);
                     destinationLayout.setOrientation(LinearLayout.HORIZONTAL);
                     destinationLayout.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));

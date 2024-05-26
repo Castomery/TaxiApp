@@ -9,9 +9,12 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.example.androidtaxiapp2.Enums.OrderStatus;
 import com.example.androidtaxiapp2.Enums.Roles;
 import com.example.androidtaxiapp2.Models.Common;
+import com.example.androidtaxiapp2.Models.Order;
 import com.example.androidtaxiapp2.Models.Role;
 import com.example.androidtaxiapp2.Models.Statement;
 import com.example.androidtaxiapp2.R;
@@ -32,6 +35,8 @@ public class StatementDetailsActivity extends AppCompatActivity {
     private Button declineBtn;
     private Button backBtn;
 
+    private Statement statement;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -45,7 +50,7 @@ public class StatementDetailsActivity extends AppCompatActivity {
         declineBtn = findViewById(R.id.decline_statement_btn);
 
         Intent intent = getIntent();
-        Statement statement = (Statement) intent.getSerializableExtra("statement");
+        statement = (Statement) intent.getSerializableExtra("statement");
 
         userIdTextView.setText(statement.get_userid());
         statementDateTextView.setText(statement.get_statementDate());
@@ -53,11 +58,39 @@ public class StatementDetailsActivity extends AppCompatActivity {
 
         backBtn.setOnClickListener(v -> redirectActivity(StatementDetailsActivity.this, StatementsListActivity.class));
 
-        acceptBtn.setOnClickListener(v -> acceptStatement(statement.get_uid(), statement.get_userid()));
+        acceptBtn.setOnClickListener(v -> checkIfHasActiveOrders(statement.get_userid()));
 
         declineBtn.setOnClickListener(v -> {
             declineStatement(statement.get_uid());
         });
+    }
+
+    private void checkIfHasActiveOrders(String userId) {
+        FirebaseDatabase.getInstance().getReference(Common.ORDERS_REFERENCE).orderByChild("_userid").equalTo(userId)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        boolean hasActiveOrder = false;
+                        if(snapshot.exists()){
+                            for(DataSnapshot child : snapshot.getChildren()){
+                                Order order = child.getValue(Order.class);
+                                if (order.get_orderStatus().equals(OrderStatus.LookingForDriver.toString()) || order.get_orderStatus().equals(OrderStatus.WaitingForDriver.toString()) || order.get_orderStatus().equals(OrderStatus.InProgress.toString())){
+                                    Toast.makeText(StatementDetailsActivity.this, "User has active order", Toast.LENGTH_SHORT).show();
+                                    hasActiveOrder = true;
+                                    return;
+                                }
+                            }
+                            if (!hasActiveOrder){
+                                acceptStatement(statement.get_uid(), statement.get_userid());
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+
+                    }
+                });
     }
 
     private void declineStatement(String statementId) {

@@ -187,14 +187,46 @@ public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyC
                 if(snapshot.exists()){
                     for (DataSnapshot childSnapshot : snapshot.getChildren()){
                         Order order = childSnapshot.getValue(Order.class);
-                        if (order!=null && order.get_orderStatus().equals(OrderStatus.InProgress.toString())){
+                        if (order!=null && order.get_orderStatus().equals(OrderStatus.WaitingForDriver.toString())){
                             getPoints(order.get_route());
-                            startTrip(order);
+                            takeOrderButton.setVisibility(View.GONE);
+                            startTripButton.setVisibility(View.VISIBLE);
+                            finishTripButton.setVisibility(View.GONE);
+                            myLocationButton.setVisibility(View.GONE);
+                            displayRouteToUser();
+
+                            startTripButton.setOnClickListener(v -> {
+                                startTripButton.setVisibility(View.GONE);
+                                finishTripButton.setVisibility(View.VISIBLE);
+                                changeOrderStatus(order, OrderStatus.InProgress.toString());
+                                displayRoute();
+                            });
+
+                            finishTripButton.setOnClickListener(v -> {
+                                setfinishOrderStatus(order);
+                                reloadMap();
+                                finishTripButton.setVisibility(View.GONE);
+                                takeOrderButton.setVisibility(View.VISIBLE);
+                                myLocationButton.setVisibility(View.VISIBLE);
+                            });
                             Toast.makeText(DriverHomeActivity.this,"There is active Order", Toast.LENGTH_SHORT).show();
-                            return;
+                        }
+                        else if(order != null && order.get_orderStatus().equals(OrderStatus.InProgress.toString())){
+                            getPoints(order.get_route());
+                            takeOrderButton.setVisibility(View.GONE);
+                            startTripButton.setVisibility(View.GONE);
+                            finishTripButton.setVisibility(View.VISIBLE);
+                            myLocationButton.setVisibility(View.GONE);
+                            displayRoute();
+                            finishTripButton.setOnClickListener(v -> {
+                                setfinishOrderStatus(order);
+                                reloadMap();
+                                finishTripButton.setVisibility(View.GONE);
+                                takeOrderButton.setVisibility(View.VISIBLE);
+                                myLocationButton.setVisibility(View.VISIBLE);
+                            });
                         }
                     }
-                    Log.d("TAG", snapshot.toString());
                 }
             }
 
@@ -205,26 +237,13 @@ public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyC
         });
     }
 
+    private void changeOrderStatus(Order order, String status) {
+        order.set_orderStatus(status);
+        FirebaseDatabase.getInstance().getReference(Common.ORDERS_REFERENCE).child(order.get_uid())
+                .setValue(order);
+    }
+
     private void startTrip(Order order){
-        takeOrderButton.setVisibility(View.GONE);
-        startTripButton.setVisibility(View.VISIBLE);
-        finishTripButton.setVisibility(View.GONE);
-        myLocationButton.setVisibility(View.GONE);
-        displayRouteToUser();
-
-        startTripButton.setOnClickListener(v -> {
-            startTripButton.setVisibility(View.GONE);
-            finishTripButton.setVisibility(View.VISIBLE);
-            displayRoute();
-        });
-
-        finishTripButton.setOnClickListener(v -> {
-            setfinishOrderStatus(order);
-            reloadMap();
-            finishTripButton.setVisibility(View.GONE);
-            takeOrderButton.setVisibility(View.VISIBLE);
-            myLocationButton.setVisibility(View.VISIBLE);
-        });
 
     }
 
@@ -389,7 +408,7 @@ public class DriverHomeActivity extends AppCompatActivity implements OnMapReadyC
 
         RequestBody requestBody = RequestBody.create(MediaType.parse("application/json"), body);
 
-        Request request = new Request.Builder().url("http://192.168.0.211:5249/api/Distribution/GetRoute?origin="+org)
+        Request request = new Request.Builder().url(Common.IP_ADDRESS + "/api/Distribution/GetRoute?origin="+org)
                 .post(requestBody)
                 .addHeader("accept", "text/plain")
                 .addHeader("Content-Type", "application/json")

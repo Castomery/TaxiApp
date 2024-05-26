@@ -11,17 +11,22 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.androidtaxiapp2.Enums.OrderStatus;
+import com.example.androidtaxiapp2.Enums.Roles;
 import com.example.androidtaxiapp2.Models.BlockedUserModel;
+import com.example.androidtaxiapp2.Models.Car;
 import com.example.androidtaxiapp2.Models.Common;
+import com.example.androidtaxiapp2.Models.Order;
 import com.example.androidtaxiapp2.Models.Role;
 import com.example.androidtaxiapp2.Models.User;
 import com.example.androidtaxiapp2.R;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.UUID;
@@ -64,20 +69,20 @@ public class Users_RecyclerViewAdapter extends RecyclerView.Adapter<Users_Recycl
 
             }
         });
-        holder.blockBtn.setOnClickListener(v -> checkIfUserAlreadyBlocked(users.get(position).get_uid()));
+        holder.blockBtn.setOnClickListener(v -> checkIfUserAlreadyBlocked(users.get(position),position));
     }
 
-    private void checkIfUserAlreadyBlocked(String userId) {
+    private void checkIfUserAlreadyBlocked(User user, int position) {
 
         FirebaseDatabase.getInstance().getReference(Common.BLOCKED_USERS)
-                .orderByChild("_userId").equalTo(userId).addListenerForSingleValueEvent(new ValueEventListener() {
+                .orderByChild("_userId").equalTo(user.get_uid()).addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
                         if (snapshot.exists()){
                             Toast.makeText(context.getApplicationContext(), "User Already Blocked", Toast.LENGTH_SHORT).show();
                         }
                         else{
-                            blockUser(userId);
+                            checkUserRole(user.get_roleId(),user.get_uid(), position);
                         }
                     }
 
@@ -88,13 +93,124 @@ public class Users_RecyclerViewAdapter extends RecyclerView.Adapter<Users_Recycl
                 });
     }
 
+    private void checkIfClientHasActiveOrder(String userId, int position) {
+        FirebaseDatabase.getInstance().getReference(Common.ORDERS_REFERENCE).orderByChild("_userid").equalTo(userId)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                boolean hasActiveOrder = false;
+                if(snapshot.exists()){
+                    for(DataSnapshot child : snapshot.getChildren()){
+                        Order order = child.getValue(Order.class);
+                        if (order.get_orderStatus().equals(OrderStatus.LookingForDriver.toString()) || order.get_orderStatus().equals(OrderStatus.WaitingForDriver.toString()) || order.get_orderStatus().equals(OrderStatus.InProgress.toString())){
+                            Toast.makeText(context.getApplicationContext(), "User has active order", Toast.LENGTH_SHORT).show();
+                            hasActiveOrder = true;
+                            return;
+                        }
+                    }
+                    if (!hasActiveOrder){
+                        blockUser(userId);
+                        users.remove(position);
+                        notifyItemRemoved(position);
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
+    }
+
     private void blockUser(String userid) {
         String uid = UUID.randomUUID().toString();
         BlockedUserModel blockedUser = new BlockedUserModel(uid,userid, Calendar.getInstance().getTime().toString());
 
         FirebaseDatabase.getInstance().getReference(Common.BLOCKED_USERS)
-                .child(uid).setValue(blockedUser);
+                .child(uid).setValue(blockedUser).addOnCompleteListener(new OnCompleteListener<Void>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Void> task) {
+                    }
+                });
     }
+
+    private void checkUserRole(String userRole, String userId, int position) {
+        FirebaseDatabase.getInstance().getReference(Common.ROLES_REFERENCE).child(userRole).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()){
+                    Role role = snapshot.getValue(Role.class);
+                    if (role.get_name().equals(Roles.Driver.toString())){
+                        checkIfDriverHasActiveOrder(userId, position);
+                    }
+                    else if (role.get_name().equals(Roles.Client.toString())){
+                        checkIfClientHasActiveOrder(userId,position);
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
+    }
+
+    private void checkIfDriverHasActiveOrder(String userId, int position) {
+    FirebaseDatabase.getInstance().getReference(Common.ORDERS_REFERENCE).orderByChild("_driverid").addListenerForSingleValueEvent(new ValueEventListener() {
+        @Override
+        public void onDataChange(@NonNull DataSnapshot snapshot) {
+            boolean hasActiveOrder = false;
+            if(snapshot.exists()){
+                for(DataSnapshot child : snapshot.getChildren()){
+                    Order order = child.getValue(Order.class);
+                    if (order.get_orderStatus().equals(OrderStatus.WaitingForDriver.toString()) || order.get_orderStatus().equals(OrderStatus.InProgress.toString())){
+                        Toast.makeText(context.getApplicationContext(), "User has active order", Toast.LENGTH_SHORT).show();
+                        hasActiveOrder = true;
+                        return;
+                    }
+                }
+                if (!hasActiveOrder){
+                    blockUser(userId);
+                    removeDriverFromCar(userId);
+                    users.remove(position);
+                    notifyItemRemoved(position);
+                }
+            }
+        }
+
+        @Override
+        public void onCancelled(@NonNull DatabaseError error) {
+
+        }
+    });
+
+    }
+
+    private void removeDriverFromCar(String userId) {
+        FirebaseDatabase.getInstance().getReference(Common.CARS_REFERENCE)
+                .orderByChild("_driverId")
+                .equalTo(userId)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        if (snapshot.exists()){
+                            for (DataSnapshot child : snapshot.getChildren()){
+                                Car car = child.getValue(Car.class);
+                                car.set_driverId("");
+                                FirebaseDatabase.getInstance().getReference(Common.CARS_REFERENCE).child(car.get_uid()).setValue(car);
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+
+                    }
+                });
+    }
+
 
     @Override
     public int getItemCount() {

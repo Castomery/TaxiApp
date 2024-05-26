@@ -120,7 +120,7 @@ public class AssignDriverActivity extends AppCompatActivity implements AdapterVi
                         if (snapshot.exists()){
                             for (DataSnapshot child : snapshot.getChildren()){
                                 User user = child.getValue(User.class);
-                                allDrivers.add(user);
+                                checkIfBlocked(user);
                             }
                             findDriversWithoutCar();
                         }
@@ -133,6 +133,22 @@ public class AssignDriverActivity extends AppCompatActivity implements AdapterVi
                 });
 
 
+    }
+
+    private void checkIfBlocked(User user) {
+        FirebaseDatabase.getInstance().getReference(Common.BLOCKED_USERS).orderByChild("_userId").equalTo(user.get_uid())
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!snapshot.exists()){
+                    allDrivers.add(user);
+                }
+            }
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
     }
 
     private void findDriversWithoutCar() {

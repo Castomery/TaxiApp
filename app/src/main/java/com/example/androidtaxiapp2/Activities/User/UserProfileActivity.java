@@ -15,6 +15,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
 import com.example.androidtaxiapp2.Activities.Admin.AdminHomeActivity;
 import com.example.androidtaxiapp2.Activities.Driver.DriverHomeActivity;
 import com.example.androidtaxiapp2.Activities.SplashScreenActivity;
@@ -30,6 +31,7 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
 public class UserProfileActivity extends AppCompatActivity {
@@ -68,6 +70,7 @@ public class UserProfileActivity extends AppCompatActivity {
 
         database = FirebaseDatabase.getInstance();
         reference = database.getReference(Common.USERS_REFERENCE).child(Common.currentUser.get_uid());
+        storageReference = FirebaseStorage.getInstance().getReference();
 
         _updatedImg.setOnClickListener(view -> {
             Intent intent = new Intent();
@@ -77,6 +80,10 @@ public class UserProfileActivity extends AppCompatActivity {
         });
 
         displayValues();
+        waitingDialog = new AlertDialog.Builder(this)
+                .setCancelable(false)
+                .setMessage("Waiting...")
+                .create();
 
         _backButton.setOnClickListener(v -> {
             goToHomeActivity();
@@ -183,8 +190,10 @@ public class UserProfileActivity extends AppCompatActivity {
     private void displayValues(){
         _fullnameField.setText(Common.currentUser.get_name() + " " + Common.currentUser.get_lastname());
         _phoneField.setText(Common.currentUser.get_phone());
-        if (!TextUtils.isEmpty(Common.currentUser.get_urlImage())){
-            _updatedImg.setImageURI(Uri.parse(Common.currentUser.get_urlImage()));
+        if (Common.currentUser != null && !TextUtils.isEmpty(Common.currentUser.get_urlImage())){
+            Glide.with(this)
+                    .load(Common.currentUser.get_urlImage())
+                    .into(_updatedImg);
         }
     }
 

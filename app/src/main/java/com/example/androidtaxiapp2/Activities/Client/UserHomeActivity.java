@@ -14,6 +14,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -116,6 +117,7 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
     private MapboxOptimization optimizedClient;
     private PermissionsManager permissionsManager;
     private LocationComponent locationComponent;
+    private Point currLocation;
     private Point origin;
     private List<Point> destinations = new ArrayList<>();
     private boolean isInTrackingMode;
@@ -168,7 +170,11 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
         home.setOnClickListener(v -> recreate());
 
         buildRouteBtn.setOnClickListener(v -> {
-            redirectActivity(UserHomeActivity.this, CreateGoupRideActivity.class);
+            Intent intent = new Intent(UserHomeActivity.this, CreateGoupRideActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.putExtra("currLocation", currLocation);
+            startActivity(intent);
+            finish();
         });
 
         checkIfHasActiveOrders();
@@ -189,7 +195,7 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
                 if(snapshot.exists()){
                     for (DataSnapshot childSnapshot : snapshot.getChildren()){
                         Order order = childSnapshot.getValue(Order.class);
-                        if (order!=null && (order.get_orderStatus().equals(OrderStatus.LookingForDriver.toString()) || order.get_orderStatus().equals(OrderStatus.InProgress.toString()))){
+                        if (order!=null && (order.get_orderStatus().equals(OrderStatus.LookingForDriver.toString())|| order.get_orderStatus().equals(OrderStatus.WaitingForDriver.toString()) || order.get_orderStatus().equals(OrderStatus.InProgress.toString()))){
                             buildRouteBtn.setVisibility(View.GONE);
                             makeRequest.setVisibility(View.GONE);
                             binding.focusLocation.setVisibility(View.GONE);
@@ -246,9 +252,6 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
         if (optimizedClient != null) {
             optimizedClient.cancelCall();
         }
-        if (mapView != null){
-            mapView.onDestroy();
-        }
 
         if (EventBus.getDefault().hasSubscriberForEvent(AcceptOrder.class)){
             EventBus.getDefault().removeStickyEvent(AcceptOrder.class);
@@ -277,12 +280,7 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
     @Override
     public void onPermissionResult(boolean b) {
         if (b) {
-            mapboxMap.getStyle(new Style.OnStyleLoaded() {
-                @Override
-                public void onStyleLoaded(@NonNull Style style) {
-                    enableLocationComponent(style);
-                }
-            });
+            reloadMap();
         } else {
             Toast.makeText(UserHomeActivity.this, "Permission not granted", Toast.LENGTH_LONG).show();
         }
@@ -332,16 +330,7 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
         }
 
         mapboxMap.setStyle(Style.MAPBOX_STREETS, style -> {
-
-            // Add origin and destination to the mapboxMap
-            //enableLocationComponent(style);
-//            showRoute.setOnClickListener(v -> {
-//
-                //initMarkerIconSymbolLayer(style);
-                //initOptimizedRouteLineLayer(style);
-//                addDestinationMarker(style,stops);
-//                getOptimizedRoute(style,stops);
-//            });
+            enableLocationComponent(style);
         });
     }
 
@@ -374,7 +363,7 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
             RequestBody requestBody = RequestBody.create(MediaType.parse("application/json"), body);
 
             Request request = new Request.Builder()
-                    .url("http://192.168.0.211:5249/api/Distribution/GetRoute?origin=" + org)
+                    .url("http://172.23.50.101:5249/api/Distribution/GetRoute?origin=" + org)
                     .post(requestBody)
                     .addHeader("accept", "text/plain")
                     .addHeader("Content-Type", "application/json")
@@ -418,7 +407,7 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
 
         RequestBody requestBody = RequestBody.create(MediaType.parse("application/json"), body);
 
-        Request request = new Request.Builder().url("http://192.168.0.211:5249/api/Distribution/GetRoute?origin="+org)
+        Request request = new Request.Builder().url(Common.IP_ADDRESS + "/api/Distribution/GetRoute?origin="+org)
                 .post(requestBody)
                 .addHeader("accept", "text/plain")
                 .addHeader("Content-Type", "application/json")
@@ -512,6 +501,13 @@ public class UserHomeActivity extends AppCompatActivity implements OnMapReadyCal
 
                         }
                     });
+
+                    Location lastKnownLocation = locationComponent.getLastKnownLocation();
+                    if (lastKnownLocation != null){
+                        currLocation = Point.fromLngLat(locationComponent.getLastKnownLocation().getLongitude(),locationComponent.getLastKnownLocation().getLatitude());
+                    }else{
+
+                    }
                 }
             }
 

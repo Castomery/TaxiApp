@@ -11,6 +11,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -33,6 +34,7 @@ import com.mapbox.geojson.Point;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.Calendar;
+import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +54,8 @@ public class CreateRequestActivity extends AppCompatActivity {
     private final String econcomType = "econom";
     private final String comfortType = "comfort";
     private final String miniBusType = "minibus";
+    private final int MAX_PASSENGERS_FOR_CAR = 4;
+    private final int MAX_PASSENGERS_FOR_BUS = 6;
     private Point origin;
     private List<Point> destinations;
     private HashMap<String,String> addressesName;
@@ -61,7 +65,7 @@ public class CreateRequestActivity extends AppCompatActivity {
     private Button backBtn;
     private Button makeRequestOneCarBtn;
     private Button makeRequestRecommendationsBtn;
-    private ShortestRoute routeOneCar;
+    private HashMap<String, List<ShortestRoute>> routes;
     private List<ShortestRoute> recommendations;
     private LinearLayout pointsNamesContainer;
     private TextView textViewPrice;
@@ -101,10 +105,10 @@ public class CreateRequestActivity extends AppCompatActivity {
         }
 
         economBtn.setOnClickListener(v -> {
-            getPricesForTrip(econcomType);
+            getPricesForTrip(econcomType, MAX_PASSENGERS_FOR_CAR);
         });
-        comfortBtn.setOnClickListener(v -> getPricesForTrip(comfortType));
-        busBtn.setOnClickListener(v -> getPricesForTrip(miniBusType));
+        comfortBtn.setOnClickListener(v -> getPricesForTrip(comfortType,MAX_PASSENGERS_FOR_CAR));
+        busBtn.setOnClickListener(v -> getPricesForTrip(miniBusType, MAX_PASSENGERS_FOR_BUS));
         backBtn.setOnClickListener(v -> {
             Intent intent1 = new Intent(CreateRequestActivity.this,UserHomeActivity.class);
             startActivity(intent1);
@@ -112,9 +116,11 @@ public class CreateRequestActivity extends AppCompatActivity {
         });
     }
 
-    private void getPricesForTrip(String typeOfCar){
+    private void getPricesForTrip(String typeOfCar, int max_passengers){
         pointsNamesContainer.removeAllViews();
         recomendationContainer.removeAllViews();
+        textViewPrice.setText("");
+        textViewDuration.setText("");
         FirebaseDatabase.getInstance().getReference(Common.CAR_TYPES_REFERENCE)
                         .orderByChild("_name").equalTo(typeOfCar).addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
@@ -123,8 +129,7 @@ public class CreateRequestActivity extends AppCompatActivity {
                             for(DataSnapshot childSnapshot : snapshot.getChildren()){
                                 CarTypes carType = childSnapshot.getValue(CarTypes.class);
                                 if (carType != null){
-                                    getTripDetails(carType.get_uid(),carType.get_priceForCar(), carType.get_pricePerKm());
-                                    getRecommendation(carType.get_uid(),carType.get_priceForCar(),carType.get_pricePerKm());
+                                    getTripDetails(carType.get_uid(),carType.get_priceForCar(), carType.get_pricePerKm(), max_passengers);
                                 }
                             }
                         }
@@ -137,7 +142,7 @@ public class CreateRequestActivity extends AppCompatActivity {
                 });
     }
 
-    private void getTripDetails(String carTypeId,double priceForCar, double pricePerKm){
+    private void getTripDetails(String carTypeId,double priceForCar, double pricePerKm, int max_passengers){
         reference = database.getReference(Common.ORDERS_REFERENCE);
         String body = getDestinationsAsString(destinations);
 
@@ -148,7 +153,7 @@ public class CreateRequestActivity extends AppCompatActivity {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                Request request = new Request.Builder().url("http://192.168.0.211:5249/api/Distribution/GetOptimalRoute?origin="+org+"&priceForCar="+priceForCar+"&pricePerKm="+pricePerKm)
+                Request request = new Request.Builder().url(Common.IP_ADDRESS + "/api/Distribution/GetRouteMatrix?origin="+org+"&priceForCar="+priceForCar+"&pricePerKm="+pricePerKm+"&max_passengers="+max_passengers)
                         .post(requestBody)
                         .addHeader("accept", "text/plain")
                         .addHeader("Content-Type", "application/json")
@@ -169,61 +174,21 @@ public class CreateRequestActivity extends AppCompatActivity {
                         Gson gson = new Gson();
                         try {
                             String json = response.body().string();
-                            routeOneCar = gson.fromJson(json, ShortestRoute.class);
+                            Type recomendationList = new TypeToken<HashMap<String,List<ShortestRoute>>>(){}.getType();
+                            routes = gson.fromJson(json, recomendationList);
 
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }
-                        for(int i = 0; i < routeOneCar.route.size(); i++) {
-                            for (Map.Entry<String, String> address : addressesName.entrySet()) {
-                                if (address.getValue().equals(routeOneCar.route.get(i))){
-                                    routeOneCar.pointsNames.set(i,address.getKey());
-                                    break;
-                                }
-                            }
-                        }
+
 
                         runOnUiThread(() -> {
-                            for (int j = 0; j < routeOneCar.route.size();j++){
-                                TextView textView = new TextView(getBaseContext());
-                                textView.setText(routeOneCar.pointsNames.get(j));
-                                textView.setTextSize(15);
-                                textView.setTextColor(Color.parseColor("#000000"));
-                                textView.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 50));
-                                pointsNamesContainer.addView(textView);
-
-                                if (j!=0 && routeOneCar.priceDistribution != null){
-                                    TextView textViewdistributedPrice = new TextView(getBaseContext());
-                                    textViewdistributedPrice.setText("Price to pay:" + String.valueOf(routeOneCar.priceDistribution[j-1]));
-                                    textViewdistributedPrice.setTextSize(15);
-                                    textViewdistributedPrice.setTextColor(Color.parseColor("#000000"));
-                                    LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 50);
-                                    layoutParams.setMargins(0,10,0,20);
-                                    textViewdistributedPrice.setLayoutParams(layoutParams);
-                                    pointsNamesContainer.addView(textViewdistributedPrice);
-                                }
+                            if(routes.containsKey("oneCar")){
+                                getOneCarTrip(carTypeId,routes.get("oneCar").get(0));
                             }
-
-                            textViewPrice.setText("Price: " + String.valueOf(routeOneCar.totalPrice));
-                            textViewDuration.setText("Duration: " + String.valueOf(routeOneCar.duration));
-
-                            makeRequestOneCarBtn.setOnClickListener(v -> {
-                                String uuid = UUID.randomUUID().toString();
-                                Order order= new Order(uuid,Common.currentUser.get_uid(),"", OrderStatus.LookingForDriver.toString(), Calendar.getInstance().getTime().toString(),carTypeId,routeOneCar);
-                                reference.child(uuid).setValue(order).addOnCompleteListener(task -> {
-                                    if (task.isSuccessful()){
-
-                                        Toast.makeText(CreateRequestActivity.this,"Order created", Toast.LENGTH_SHORT).show();
-                                        Intent intent = new Intent(CreateRequestActivity.this, UserHomeActivity.class);
-                                        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP| Intent.FLAG_ACTIVITY_CLEAR_TASK| Intent.FLAG_ACTIVITY_NEW_TASK);
-                                        startActivity(intent);
-                                        finish();
-                                    }else{
-                                        Toast.makeText(CreateRequestActivity.this,"Something went wrong", Toast.LENGTH_SHORT).show();
-                                    }
-                                });
-
-                            });
+                            if (routes.get("recommendations").size() != 1){
+                                getRecommendation(carTypeId,routes.get("recommendations"));
+                            }
                         });
                     }
                 });
@@ -232,116 +197,123 @@ public class CreateRequestActivity extends AppCompatActivity {
 
     }
 
-    private void getRecommendation(String carTypeId,double priceForCar, double pricePerKm){
-        reference = database.getReference(Common.ORDERS_REFERENCE);
+    private void getOneCarTrip(String carTypeId, ShortestRoute trip){
 
-        String body = getDestinationsAsString(destinations);
-
-        String org = origin.longitude()+","+origin.latitude();
-
-        RequestBody requestBody = RequestBody.create(MediaType.parse("application/json"), body);
-
-        new Thread(() -> {
-            Request request = new Request.Builder().url("http://192.168.0.211:5249/api/Distribution/GetDistribution?origin="+org+"&priceForCar="+priceForCar+"&pricePerKm="+pricePerKm)
-                    .post(requestBody)
-                    .addHeader("accept", "text/plain")
-                    .addHeader("Content-Type", "application/json")
-                    .build();
-
-            client.newCall(request).enqueue(new Callback() {
-                @Override
-                public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                    runOnUiThread(() -> {
-                        Toast.makeText(CreateRequestActivity.this,"Failed", Toast.LENGTH_SHORT).show();
-                        Log.d("TAG", e.getMessage());
-                    });
+        for(int i = 0; i < trip.route.size(); i++) {
+            for (Map.Entry<String, String> address : addressesName.entrySet()) {
+                if (address.getValue().equals(trip.route.get(i))){
+                    trip.pointsNames.add(address.getKey());
+                    break;
                 }
+            }
+        }
 
-                @Override
-                public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+        for (int j = 0; j < trip.route.size();j++){
+            TextView textView = new TextView(getBaseContext());
+            textView.setText(trip.pointsNames.get(j));
+            textView.setTextSize(15);
+            textView.setTextColor(Color.parseColor("#000000"));
+            textView.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 50));
+            pointsNamesContainer.addView(textView);
 
+            if (j!=0 && trip.priceDistribution != null){
+                TextView textViewdistributedPrice = new TextView(getBaseContext());
+                textViewdistributedPrice.setText("Price to pay:" + String.valueOf(trip.priceDistribution[j-1]));
+                textViewdistributedPrice.setTextSize(15);
+                textViewdistributedPrice.setTextColor(Color.parseColor("#000000"));
+                LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 50);
+                layoutParams.setMargins(0,10,0,20);
+                textViewdistributedPrice.setLayoutParams(layoutParams);
+                pointsNamesContainer.addView(textViewdistributedPrice);
+            }
+        }
 
-                    Gson gson = new Gson();
-                    try {
-                        String json = response.body().string();
-                        Type recomendationList = new TypeToken<List<ShortestRoute>>(){}.getType();
-                        recommendations = gson.fromJson(json, recomendationList);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
+        textViewPrice.setText("Price: " + String.valueOf(trip.totalPrice));
+        textViewDuration.setText("Duration: " + String.valueOf(trip.duration));
+
+        makeRequestOneCarBtn.setOnClickListener(v -> {
+            createRequest(trip, carTypeId);
+            Intent intent = new Intent(CreateRequestActivity.this, UserHomeActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP| Intent.FLAG_ACTIVITY_CLEAR_TASK| Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            finish();
+        });
+
+    }
+
+    private void getRecommendation(String carTypeId,List<ShortestRoute> recommendations){
+
+        for(int i = 0; i < recommendations.size(); i++) {
+            ShortestRoute currRoute = (ShortestRoute) recommendations.get(i);
+            for (int j = 0; j < currRoute.route.size(); j++) {
+                for (Map.Entry<String, String> address : addressesName.entrySet()) {
+                    if (address.getValue().equals(currRoute.route.get(j))){
+                        currRoute.pointsNames.add(address.getKey());
+                        break;
                     }
-
-                    runOnUiThread(() -> {
-                        for(int i = 0; i < recommendations.size(); i++) {
-                            ShortestRoute currRoute = (ShortestRoute) recommendations.get(i);
-                            for (int j = 0; j < currRoute.route.size(); j++) {
-                                for (Map.Entry<String, String> address : addressesName.entrySet()) {
-                                    if (address.getValue().equals(currRoute.route.get(j))){
-                                        currRoute.pointsNames.set(j,address.getKey());
-                                        break;
-                                    }
-                                }
-                            }
-                            LinearLayout layout = new LinearLayout(getBaseContext());
-                            layout.setOrientation(LinearLayout.VERTICAL);
-                            layout.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.WRAP_CONTENT));
-
-                            for (int j = 0; j < currRoute.route.size();j++){
-                                TextView textView = new TextView(getBaseContext());
-                                textView.setText(currRoute.pointsNames.get(j));
-                                textView.setTextSize(15);
-                                textView.setTextColor(Color.parseColor("#000000"));
-                                textView.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 50));
-                                layout.addView(textView);
-
-                                if (j!=0 && currRoute.priceDistribution != null){
-                                    TextView textViewdistributedPrice = new TextView(getBaseContext());
-                                    textViewdistributedPrice.setText("Price to pay:" + String.valueOf(currRoute.priceDistribution[j-1]));
-                                    textViewdistributedPrice.setTextSize(15);
-                                    textViewdistributedPrice.setTextColor(Color.parseColor("#000000"));
-                                    LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 50);
-                                    layoutParams.setMargins(0,10,0,20);
-                                    textViewdistributedPrice.setLayoutParams(layoutParams);
-                                    layout.addView(textViewdistributedPrice);
-                                }
-                            }
-
-                            TextView textviewPrice = new TextView(getBaseContext());
-                            textviewPrice.setText("Price: " + String.valueOf(currRoute.totalPrice));
-                            textviewPrice.setTextSize(20);
-                            textviewPrice.setTextColor(Color.parseColor("#000000"));
-                            textviewPrice.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-
-                            TextView textviewDuration = new TextView(getBaseContext());
-                            textviewDuration.setText( "Duration: "+String.valueOf(currRoute.duration));
-                            textviewDuration.setTextSize(20);
-                            textviewDuration.setTextColor(Color.parseColor("#000000"));
-                            textviewDuration.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,LinearLayout.LayoutParams.WRAP_CONTENT));
-
-                            layout.addView(textviewPrice);
-                            layout.addView(textviewDuration);
-                            recomendationContainer.addView(layout);
-                        }
-                        makeRequestRecommendationsBtn.setOnClickListener(v -> {
-                            for (ShortestRoute route : recommendations){
-                                String uuid = UUID.randomUUID().toString();
-                                Order order= new Order(uuid,Common.currentUser.get_uid(),"", OrderStatus.InProgress.toString(), Calendar.getInstance().getTime().toString(),carTypeId,route);
-                                reference.child(uuid).setValue(order).addOnCompleteListener(task -> {
-                                    if (task.isSuccessful()){
-                                        Toast.makeText(CreateRequestActivity.this,"Order created", Toast.LENGTH_SHORT).show();
-                                    }else{
-                                        Toast.makeText(CreateRequestActivity.this,"Something went wrong", Toast.LENGTH_SHORT).show();
-                                    }
-                                });
-                            }
-                            Intent intent = new Intent(CreateRequestActivity.this, UserHomeActivity.class);
-                            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP| Intent.FLAG_ACTIVITY_CLEAR_TASK| Intent.FLAG_ACTIVITY_NEW_TASK);
-                            startActivity(intent);
-                            finish();
-                        });
-                    });
                 }
-            });
-        }).start();
+            }
+            LinearLayout layout = new LinearLayout(getBaseContext());
+            layout.setOrientation(LinearLayout.VERTICAL);
+            layout.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.WRAP_CONTENT));
+
+            for (int j = 0; j < currRoute.route.size();j++){
+                TextView textView = new TextView(getBaseContext());
+                textView.setText(currRoute.pointsNames.get(j));
+                textView.setTextSize(15);
+                textView.setTextColor(Color.parseColor("#000000"));
+                textView.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 50));
+                layout.addView(textView);
+
+                if (j!=0 && currRoute.priceDistribution != null){
+                    TextView textViewdistributedPrice = new TextView(getBaseContext());
+                    textViewdistributedPrice.setText("Price to pay:" + String.valueOf(currRoute.priceDistribution[j-1]));
+                    textViewdistributedPrice.setTextSize(15);
+                    textViewdistributedPrice.setTextColor(Color.parseColor("#000000"));
+                    LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 50);
+                    layoutParams.setMargins(0,10,0,20);
+                    textViewdistributedPrice.setLayoutParams(layoutParams);
+                    layout.addView(textViewdistributedPrice);
+                }
+            }
+
+            TextView textviewPrice = new TextView(getBaseContext());
+            textviewPrice.setText("Price: " + String.valueOf(currRoute.totalPrice));
+            textviewPrice.setTextSize(20);
+            textviewPrice.setTextColor(Color.parseColor("#000000"));
+            textviewPrice.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+            TextView textviewDuration = new TextView(getBaseContext());
+            textviewDuration.setText( "Duration: "+String.valueOf(currRoute.duration));
+            textviewDuration.setTextSize(20);
+            textviewDuration.setTextColor(Color.parseColor("#000000"));
+            textviewDuration.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,LinearLayout.LayoutParams.WRAP_CONTENT));
+
+            layout.addView(textviewPrice);
+            layout.addView(textviewDuration);
+            recomendationContainer.addView(layout);
+        }
+        makeRequestRecommendationsBtn.setOnClickListener(v -> {
+            for (ShortestRoute route : recommendations){
+                createRequest(route, carTypeId);
+            }
+            Intent intent = new Intent(CreateRequestActivity.this, UserHomeActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP| Intent.FLAG_ACTIVITY_CLEAR_TASK| Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            finish();
+        });
+    }
+
+    private void createRequest(ShortestRoute route, String carTypeId){
+        String uuid = UUID.randomUUID().toString();
+        Order order= new Order(uuid,Common.currentUser.get_uid(),"", OrderStatus.LookingForDriver.toString(), Calendar.getInstance().getTime().toString(),carTypeId,route);
+        reference.child(uuid).setValue(order).addOnCompleteListener(task -> {
+            if (task.isSuccessful()){
+                Toast.makeText(CreateRequestActivity.this,"Order created", Toast.LENGTH_SHORT).show();
+            }else{
+                Toast.makeText(CreateRequestActivity.this,"Something went wrong", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private String getDestinationsAsString(List<Point> destinations){

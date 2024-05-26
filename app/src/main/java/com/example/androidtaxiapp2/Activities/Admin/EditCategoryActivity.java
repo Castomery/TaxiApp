@@ -44,6 +44,11 @@ public class EditCategoryActivity extends AppCompatActivity {
         pricePerKm.setText(String.valueOf(carType.get_pricePerKm()));
 
         saveChanges.setOnClickListener(v -> updateData(carType,carType.get_uid()));
+        backBtn.setOnClickListener(v -> {
+            Intent intent1 = new Intent(EditCategoryActivity.this, CategoryPricesActivity.class);
+            startActivity(intent1);
+            finish();
+        });
     }
 
     private void updateData(CarTypes carType, String uid) {

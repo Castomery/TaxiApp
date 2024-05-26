@@ -32,6 +32,7 @@ public class Common {
     public static final String FINISH_ORDER_TITLE = "Order finished";
     public static final String DRIVER_NAME = "driver";
     public static final String CAR_INFO = "car";
+    public static final String IP_ADDRESS = "http://192.168.1.8:5249";
 
 
     public static User currentUser;

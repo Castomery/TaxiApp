@@ -4,6 +4,7 @@ public enum
 OrderStatus {
     Done,
     LookingForDriver,
+    WaitingForDriver,
     InProgress,
     Canceled
 }

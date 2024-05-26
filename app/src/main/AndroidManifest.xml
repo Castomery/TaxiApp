@@ -15,84 +15,111 @@
         android:supportsRtl="true"
         android:theme="@style/AndroidTaxiApp2"
         android:usesCleartextTraffic="true"
-        tools:targetApi="31">
+        tools:targetApi="31"
+        >
         <activity
             android:name=".Activities.Admin.AssignDriverActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"
+            />
         <activity
             android:name=".Activities.Admin.CarListActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.Admin.EditCategoryActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.Admin.CategoryPricesActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.Admin.BlockedUsersListActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.Admin.StatementDetailsActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.Admin.StatementsListActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.Admin.AddCarActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.Admin.UsersListActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.Admin.AdminHomeActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.Driver.DriverOrderDetailsActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.Driver.DriverTakeOrderActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.Client.ClientOrderDetailsActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.OrderHistoryActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.Client.CreateRequestActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.Client.CreateGoupRideActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.User.ChangePasswordActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.User.ChangeUserInfoActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.Driver.DriverHomeActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:label="@string/title_activity_driver_home"
             android:theme="@style/AndroidTaxiApp2.NoActionBar" />
         <activity
             android:name=".Activities.Client.StatementActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.User.UserProfileActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.Client.UserHomeActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:label="@string/title_activity_user_home"
             android:theme="@style/AndroidTaxiApp2.NoActionBar" />
         <activity
             android:name=".Activities.LoginActivity"
-            android:theme="@style/Logintheme" />
-        <activity android:name=".Activities.RegisterActivity" />
+            android:theme="@style/Logintheme"
+            android:screenOrientation="portrait"/>
+        <activity android:name=".Activities.RegisterActivity"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".Activities.SplashScreenActivity"
             android:exported="true"
+            android:screenOrientation="portrait"
             android:theme="@style/AndroidTaxiApp2">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

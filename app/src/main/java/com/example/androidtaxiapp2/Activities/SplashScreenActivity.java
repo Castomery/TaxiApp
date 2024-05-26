@@ -61,58 +61,7 @@ public class SplashScreenActivity extends AppCompatActivity {
         View view = binding.getRoot();
         setContentView(view);
 
-       //init();
     }
-
-//    private void init(){
-//
-//        database = FirebaseDatabase.getInstance();
-//        reference = database.getReference(Common.USERS_REFERENCE);
-//
-//        providers = Arrays.asList( new AuthUI.IdpConfig.PhoneBuilder().build(),new AuthUI.IdpConfig.GoogleBuilder().build());
-//        firebaseAuth = FirebaseAuth.getInstance();
-//        listener = myFirebaseAuth -> {
-//            FirebaseUser user = myFirebaseAuth.getCurrentUser();
-//            if (user != null){
-//    FirebaseMessaging.getInstance().getToken()
-//                        .addOnFailureListener(e -> Toast.makeText(SplashScreenActivity.this,e.getMessage(),Toast.LENGTH_SHORT).show()).addOnSuccessListener(s -> {
-//        Log.d("TOKEN", s);
-//        UserUtils.updateToken(SplashScreenActivity.this,s);
-//    });
-//
-//            }
-//        };
-//
-//    }
-
-//    private void checkUserFromFireBase() {
-//        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid().toString();
-//        reference.child(FirebaseAuth.getInstance().getCurrentUser().getUid())
-//                .addListenerForSingleValueEvent(new ValueEventListener() {
-//                    @Override
-//                    public void onDataChange(@NonNull DataSnapshot snapshot) {
-//                        if(snapshot.exists()){
-//                            Toast.makeText(SplashScreenActivity.this, "User already register", Toast.LENGTH_SHORT).show();
-//                            User user = snapshot.getValue(User.class);
-//                            //goToHomeActivity(user);
-//                        }
-//                    }
-//
-//                    @Override
-//                    public void onCancelled(@NonNull DatabaseError error) {
-//                        Toast.makeText(SplashScreenActivity.this, "Error", Toast.LENGTH_SHORT).show();
-//                    }
-//                });
-//    }
-
-//    private void goToHomeActivity(User user) {
-//        Common.currentUser = user;
-//        startActivity(new Intent(SplashScreenActivity.this, UserHomeActivity.class));
-//        finish();
-//    }
-//
-//    private void showRegisterLayout() {
-//    }
 
     private void showLoginLayout() {
         Intent intent = new Intent(SplashScreenActivity.this,LoginActivity.class);
@@ -130,17 +79,4 @@ public class SplashScreenActivity extends AppCompatActivity {
         }
                 , 3000);
     }
-
-//    @Override
-//    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-//        super.onActivityResult(requestCode,resultCode,data);
-//        if (requestCode == LOGIN_REQUEST_CODE){
-//            if (requestCode == RESULT_OK){
-//                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-//            }
-//            else{
-//                Toast.makeText(this,"Failed to sign in" , Toast.LENGTH_SHORT).show();
-//            }
-//        }
-//    }
 }

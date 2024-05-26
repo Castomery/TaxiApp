@@ -13,6 +13,7 @@ import android.widget.Button;
 
 import com.example.androidtaxiapp2.Adapters.Users_RecyclerViewAdapter;
 import com.example.androidtaxiapp2.Enums.Roles;
+import com.example.androidtaxiapp2.Models.BlockedUserModel;
 import com.example.androidtaxiapp2.Models.Common;
 import com.example.androidtaxiapp2.Models.Order;
 import com.example.androidtaxiapp2.Models.Role;
@@ -35,6 +36,7 @@ public class UsersListActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private Button usersListBackBtn;
     private List<User> userList = new ArrayList<>();
+    private List<String> blockedUsers = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +47,7 @@ public class UsersListActivity extends AppCompatActivity {
         reference = database.getReference(Common.USERS_REFERENCE);
         recyclerView = findViewById(R.id.usersRecyclerView);
         usersListBackBtn = findViewById(R.id.users_list_btn_back);
+        getBlockedUsers();
         getClientsAndDrivers();
 
         usersListBackBtn.setOnClickListener(v -> {
@@ -52,6 +55,25 @@ public class UsersListActivity extends AppCompatActivity {
             startActivity(intent);
             finish();
         });
+    }
+
+    private void getBlockedUsers() {
+        FirebaseDatabase.getInstance().getReference(Common.BLOCKED_USERS)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        if (snapshot.exists()){
+                            for(DataSnapshot child : snapshot.getChildren()){
+                                BlockedUserModel blockedUserModel = child.getValue(BlockedUserModel.class);
+                                blockedUsers.add(blockedUserModel.get_userId());
+                            }
+                        }
+                    }
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+
+                    }
+                });
     }
 
     private void getClientsAndDrivers() {
@@ -82,7 +104,7 @@ public class UsersListActivity extends AppCompatActivity {
                     for (DataSnapshot childSnapshot : snapshot.getChildren()){
                         if (childSnapshot.exists()){
                             User user = childSnapshot.getValue(User.class);
-                            if (!user.get_roleId().equals(role.get_uid())){
+                            if (!user.get_roleId().equals(role.get_uid()) && !blockedUsers.contains(user.get_uid())){
                                 userList.add(user);
                             }
                         }
